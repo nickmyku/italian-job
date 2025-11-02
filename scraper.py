@@ -157,7 +157,6 @@ def extract_dms_coordinates_from_text(text):
             lat, _ = lat_result
             lon, _ = lon_result
             if -90 <= lat <= 90 and -180 <= lon <= 180:
- lat, lon)
                 return lat, lon
     
     return None, None
