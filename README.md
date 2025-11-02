@@ -1,10 +1,10 @@
 # Ship Tracker - Sagittarius Leader
 
-A web application that scrapes marinevesseltraffic.com for the current location of the ship "Sagittarius Leader" and displays it on an interactive map with daily automatic updates.
+A web application that scrapes shipnext.com for the destination information of the ship "Sagittarius Leader" and displays it on an interactive map with daily automatic updates.
 
 ## Features
 
-- ?? Web scraping of ship location from marinevesseltraffic.com
+- ?? Web scraping of ship destination information from shipnext.com
 - ??? Interactive map visualization using Leaflet.js
 - ?? Real-time location display with coordinates, speed, and heading
 - ?? Location history tracking
@@ -30,7 +30,7 @@ The application will be available at `http://localhost:5000`
 ## How It Works
 
 1. **Backend (Flask)**: 
-   - Scrapes marinevesseltraffic.com for ship location data
+   - Scrapes shipnext.com for ship destination information
    - Stores location data in SQLite database
    - Provides REST API endpoints for location data
    - Runs scheduled daily updates at midnight UTC
@@ -53,7 +53,7 @@ The application will be available at `http://localhost:5000`
 
 ## Notes
 
-- The scraper handles various HTML structures and fallback methods to extract location data
+- The scraper handles various HTML structures and fallback methods to extract destination information from shipnext.com
 - If direct coordinates aren't found, the app attempts geocoding of location text
 - The database stores location history for tracking ship movements over time
 - Map uses OpenStreetMap tiles for visualization

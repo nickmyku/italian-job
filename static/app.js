@@ -20,7 +20,7 @@ function initMap() {
 // Update map with ship location
 function updateMap(locationData) {
     if (!locationData || !locationData.latitude || !locationData.longitude) {
-        showStatus('No location data available', 'error');
+            showStatus('No destination data available', 'error');
         return;
     }
     
@@ -46,7 +46,7 @@ function updateMap(locationData) {
     // Create popup content
     let popupContent = `<strong>Sagittarius Leader</strong><br>`;
     if (locationData.location_text) {
-        popupContent += `Location: ${locationData.location_text}<br>`;
+        popupContent += `Destination: ${locationData.location_text}<br>`;
     }
     popupContent += `Coordinates: ${lat.toFixed(6)}, ${lon.toFixed(6)}<br>`;
     if (locationData.speed) {
@@ -94,9 +94,9 @@ async function fetchLocation() {
         
         if (data.success) {
             updateMap(data);
-            showStatus('Location updated successfully', 'success');
+            showStatus('Destination updated successfully', 'success');
         } else {
-            showStatus('No location data found', 'error');
+            showStatus('No destination data found', 'error');
         }
     } catch (error) {
         console.error('Error fetching location:', error);
@@ -107,7 +107,7 @@ async function fetchLocation() {
 // Manual update
 async function manualUpdate() {
     try {
-        showStatus('Updating location...', 'loading');
+        showStatus('Updating destination...', 'loading');
         const response = await fetch('/api/update', {
             method: 'POST'
         });
@@ -115,15 +115,15 @@ async function manualUpdate() {
         
         if (data.success) {
             updateMap(data.data);
-            showStatus('Location updated successfully', 'success');
+            showStatus('Destination updated successfully', 'success');
             // Refresh history
             fetchHistory();
         } else {
-            showStatus('Failed to update location: ' + (data.message || 'Unknown error'), 'error');
+            showStatus('Failed to update destination: ' + (data.message || 'Unknown error'), 'error');
         }
     } catch (error) {
         console.error('Error updating location:', error);
-        showStatus('Error updating location', 'error');
+        showStatus('Error updating destination', 'error');
     }
 }
 
