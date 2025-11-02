@@ -173,15 +173,15 @@ def extract_coordinates_after_position_string(text):
         return None, None
     
     # Look for the pattern "Vessel's current position is" followed by coordinates
-    # Try various formats that might follow this string
+    # Try various formats that might follow this string (case-insensitive, handles variations)
     position_patterns = [
         # Pattern: "Vessel's current position is" followed by DMS format with slash
         # e.g., "Vessel's current position is 051° 18' 06" N / 003° 14' 14" E"
-        r"Vessel's current position is\s+(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])\s*/\s*(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])",
+        r"Vessel'?s\s+current\s+position\s+is\s+(\d+[°\s]+\d+['\s]+\d+(?:\.\d+)?[\"]?\s*[NS])\s*/\s*(\d+[°\s]+\d+['\s]+\d+(?:\.\d+)?[\"]?\s*[EW])",
         # Pattern: "Vessel's current position is" followed by DMS format with comma
-        r"Vessel's current position is\s+(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS]),\s*(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])",
+        r"Vessel'?s\s+current\s+position\s+is\s+(\d+[°\s]+\d+['\s]+\d+(?:\.\d+)?[\"]?\s*[NS]),\s*(\d+[°\s]+\d+['\s]+\d+(?:\.\d+)?[\"]?\s*[EW])",
         # Pattern: "Vessel's current position is" followed by decimal degrees
-        r"Vessel's current position is\s*[:\-]?\s*(-?\d+\.?\d*)\s*[,/\s]+\s*(-?\d+\.?\d*)",
+        r"Vessel'?s\s+current\s+position\s+is\s*[:\-]?\s*(-?\d+\.?\d*)\s*[,/\s]+\s*(-?\d+\.?\d*)",
     ]
     
     for pattern in position_patterns:
@@ -397,7 +397,7 @@ def extract_from_shipnext_detail(soup, ship_name):
             location_data['longitude'] = lon
             print(f"[DEBUG] Coordinates extracted from 'Vessel's current position is': Latitude={lat}, Longitude={lon}")
     
-    # Try to find coordinates in text
+    # Try to find coordinates in text (only if not found above)
     if not location_data['latitude']:
         lat, lon = extract_coordinates_from_text(text_content)
         if lat and lon:
