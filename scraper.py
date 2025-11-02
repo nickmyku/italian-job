@@ -20,11 +20,130 @@ def geocode_location(location_text):
         print(f"Geocoding error: {e}")
     return None, None
 
-def extract_coordinates_from_text(text):
-    """Try to extract coordinates directly from text"""
+def parse_dms_to_decimal(dms_str):
+    """
+    Parse degrees, minutes, seconds format to decimal degrees
+    Supports formats like:
+    - 40?42'46"N
+    - 40? 42' 46" N
+    - 40 deg 42 min 46 sec N
+    - 40?42'46.5"N
+    Returns tuple (decimal_degrees, hemisphere) or None if parsing fails
+    """
+    if not dms_str:
+        return None
+    
+    # Pattern for DMS format: degrees?minutes'seconds"hemisphere
+    # Supports various separators and formats
+    patterns = [
+        # Standard format: 40?42'46"N or 40? 42' 46" N
+        r'(\d+)[?\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"\s]*([NSEW])',
+        # Alternative format: 40 deg 42 min 46 sec N
+        r'(\d+)\s*(?:deg|degree|?)\s+(\d+)\s*(?:min|minute|\')\s+(\d+(?:\.\d+)?)\s*(?:sec|second|\")?\s*([NSEW])',
+        # With decimal seconds: 40?42'46.5"N
+        r'(\d+)[?\s]+(\d+)[\'\s]+(\d+\.\d+)[\"\s]*([NSEW])',
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, dms_str, re.I)
+        if match:
+            try:
+                degrees = int(match.group(1))
+                minutes = int(match.group(2))
+                seconds = float(match.group(3))
+                hemisphere = match.group(4).upper()
+                
+                # Convert to decimal degrees
+                decimal = degrees + (minutes / 60.0) + (seconds / 3600.0)
+                
+                # Apply hemisphere (negative for S and W)
+                if hemisphere in ['S', 'W']:
+                    decimal = -decimal
+                
+                return decimal, hemisphere
+            except (ValueError, IndexError):
+                continue
+    
+    return None
+
+def extract_dms_coordinates_from_text(text):
+    """
+    Extract latitude and longitude in DMS format from text
+    Returns tuple (latitude, longitude) or (None, None) if not found
+    """
     if not text:
         return None, None
     
+    # Look for latitude patterns (N/S)
+    lat_patterns = [
+        r'Lat[itude]*[:]?\s*(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])',
+        r'(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])',
+    ]
+    
+    lat_dms = None
+    for pattern in lat_patterns:
+        match = re.search(pattern, text, re.I)
+        if match:
+            lat_dms = match.group(1)
+            break
+    
+    # Look for longitude patterns (E/W)
+    lon_patterns = [
+        r'Lon[gitude]*[:]?\s*(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])',
+        r'(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])',
+    ]
+    
+    lon_dms = None
+    for pattern in lon_patterns:
+        match = re.search(pattern, text, re.I)
+        if match:
+            lon_dms = match.group(1)
+            break
+    
+    # If we found both, try to parse them
+    if lat_dms and lon_dms:
+        lat_result = parse_dms_to_decimal(lat_dms)
+        lon_result = parse_dms_to_decimal(lon_dms)
+        
+        if lat_result and lon_result:
+            lat, _ = lat_result
+            lon, _ = lon_result
+            # Validate reasonable coordinates
+            if -90 <= lat <= 90 and -180 <= lon <= 180:
+                return lat, lon
+    
+    # Try to find DMS coordinates in pairs (common format: lat, lon)
+    # Pattern: 40?42'46"N, 74?00'21"W or similar
+    pair_pattern = r'(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])[,\s]+(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])'
+    pair_match = re.search(pair_pattern, text, re.I)
+    if pair_match:
+        lat_dms = pair_match.group(1)
+        lon_dms = pair_match.group(2)
+        lat_result = parse_dms_to_decimal(lat_dms)
+        lon_result = parse_dms_to_decimal(lon_dms)
+        
+        if lat_result and lon_result:
+            lat, _ = lat_result
+            lon, _ = lon_result
+            if -90 <= lat <= 90 and -180 <= lon <= 180:
+                return lat, lon
+    
+    return None, None
+
+def extract_coordinates_from_text(text):
+    """
+    Try to extract coordinates from text
+    Supports both decimal degrees and DMS format
+    """
+    if not text:
+        return None, None
+    
+    # First try DMS format (degrees, minutes, seconds)
+    lat, lon = extract_dms_coordinates_from_text(text)
+    if lat and lon:
+        return lat, lon
+    
+    # Fallback to decimal degrees format
     # Look for patterns like "lat: 40.123, lon: -74.456" or "40.123, -74.456"
     coord_pattern = r'(-?\d+\.?\d*)\s*[,:]\s*(-?\d+\.?\d*)'
     matches = re.findall(coord_pattern, text)
