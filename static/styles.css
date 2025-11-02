@@ -181,21 +181,22 @@ header h1 {
     font-family: monospace;
 }
 
-@media (max-width: 768px) {
-    header h1 {
-        font-size: 2em;
+.ship-marker {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.ship-marker svg {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
     }
-    
-    .controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .info-panel {
-        grid-template-columns: 1fr;
-    }
-    
-    #map {
-        height: 400px;
+    50% {
+        transform: translateY(-5px);
     }
 }
