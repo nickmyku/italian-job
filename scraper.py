@@ -112,6 +112,37 @@ def extract_dms_coordinates_from_text(text):
             if -90 <= lat <= 90 and -180 <= lon <= 180:
                 return lat, lon
     
+    # Try to find DMS coordinates in pairs with forward slash separator
+    # Pattern: 051? 18' 06" N / 003? 14' 14" E
+    slash_pattern = r'(\d+)[?\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"]?\s*([NS])\s*/\s*(\d+)[?\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"]?\s*([EW])'
+    slash_match = re.search(slash_pattern, text, re.I)
+    if slash_match:
+        try:
+            lat_deg = int(slash_match.group(1))
+            lat_min = int(slash_match.group(2))
+            lat_sec = float(slash_match.group(3))
+            lat_hem = slash_match.group(4).upper()
+            
+            lon_deg = int(slash_match.group(5))
+            lon_min = int(slash_match.group(6))
+            lon_sec = float(slash_match.group(7))
+            lon_hem = slash_match.group(8).upper()
+            
+            # Convert to decimal degrees
+            lat = lat_deg + (lat_min / 60.0) + (lat_sec / 3600.0)
+            lon = lon_deg + (lon_min / 60.0) + (lon_sec / 3600.0)
+            
+            # Apply hemisphere (negative for S and W)
+            if lat_hem == 'S':
+                lat = -lat
+            if lon_hem == 'W':
+                lon = -lon
+            
+            if -90 <= lat <= 90 and -180 <= lon <= 180:
+                return lat, lon
+        except (ValueError, IndexError):
+            pass
+    
     # Try to find DMS coordinates in pairs (common format: lat, lon)
     # Pattern: 40?42'46"N, 74?00'21"W or similar
     pair_pattern = r'(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])[,\s]+(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])'
