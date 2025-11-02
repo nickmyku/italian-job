@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sagittarius Leader Position</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-sA+e2atcRd3doauK6Cizb+0xiVbXwZMKX7n4aqf0C2k="
+      crossorigin="anonymous"
+    >
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        background: #0f172a;
+        color: #e2e8f0;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+      header {
+        padding: 1.5rem clamp(1.5rem, 4vw, 4rem);
+        background: linear-gradient(120deg, rgba(14,165,233,0.75), rgba(99,102,241,0.75));
+        backdrop-filter: blur(10px);
+        box-shadow: 0 1rem 3rem rgba(15,23,42,0.45);
+      }
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: clamp(2rem, 4vw, 2.75rem);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      p {
+        margin: 0;
+        max-width: 60ch;
+        font-size: clamp(1rem, 2vw, 1.15rem);
+        opacity: 0.88;
+      }
+      #map {
+        width: min(960px, 90vw);
+        height: min(640px, 70vh);
+        margin: clamp(1rem, 3vw, 2.5rem) auto;
+        border-radius: 1.25rem;
+        overflow: hidden;
+        box-shadow: 0 1.25rem 3.5rem rgba(15, 23, 42, 0.55);
+      }
+      .info {
+        max-width: min(960px, 90vw);
+        margin: 0 auto 2rem;
+        padding: clamp(1rem, 3vw, 1.5rem);
+        background: rgba(15, 23, 42, 0.55);
+        border-radius: 1rem;
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Sagittarius Leader ? Current Position</h1>
+      <p>
+        Live coordinates are not embedded because they require an authorized data source.
+        Update the <code>vesselPosition</code> object with verified latitude/longitude values
+        obtained from a service you are licensed to use.
+      </p>
+    </header>
+    <div id="map"></div>
+    <section class="info">
+      <h2 style="margin-top: 0;">How to update this page</h2>
+      <ol>
+        <li>Pick a compliant data source (for example an API that you are permitted to use).</li>
+        <li>Automate a daily job (GitHub Actions, cron, etc.) that rewrites this file with fresh coordinates.</li>
+        <li>Replace the placeholder latitude/longitude below with the latest verified numbers.</li>
+      </ol>
+      <p>
+        The marker and map automatically recenter when you change the coordinates. You can also
+        attach a timestamp and metadata to the template for richer context.
+      </p>
+    </section>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-VuZ8BV0v0N3hjLSeIE54CoOZK17PjD5gr52P3S0ZfG0="
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      // TODO: Replace with authorized, up-to-date coordinates sourced via a compliant API or feed.
+      const vesselPosition = {
+        latitude: 35.0, // placeholder latitude
+        longitude: 139.0, // placeholder longitude
+        lastUpdated: "YYYY-MM-DD", // e.g., "2025-11-02"
+      };
+
+      const map = L.map('map', {
+        zoomControl: true,
+        attributionControl: true,
+      }).setView([vesselPosition.latitude, vesselPosition.longitude], 6);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+      }).addTo(map);
+
+      const marker = L.marker([vesselPosition.latitude, vesselPosition.longitude]).addTo(map);
+
+      marker.bindPopup(
+        `<strong>Sagittarius Leader</strong><br>` +
+        `Latitude: ${vesselPosition.latitude.toFixed(4)}?<br>` +
+        `Longitude: ${vesselPosition.longitude.toFixed(4)}?<br>` +
+        (vesselPosition.lastUpdated
+          ? `Last updated: ${vesselPosition.lastUpdated}`
+          : 'Update timestamp unavailable')
+      );
+
+      marker.openPopup();
+    </script>
+  </body>
+</html>
