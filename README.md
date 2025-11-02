@@ -53,6 +53,7 @@ The application will be available at `http://localhost:5000`
 
 ## Notes
 
+- The scraper fetches data directly from the Sagittarius Leader vessel page: `https://shipnext.com/vessel/9283887-sagittarius-leader`
 - The scraper handles various HTML structures and fallback methods to extract destination information from shipnext.com
 - If direct coordinates aren't found, the app attempts geocoding of location text
 - The database stores location history for tracking ship movements over time

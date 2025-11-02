@@ -44,10 +44,11 @@ def extract_coordinates_from_text(text):
 def scrape_ship_location(ship_name):
     """
     Scrape shipnext.com for ship destination information
+    Uses direct vessel URL: https://shipnext.com/vessel/9283887-sagittarius-leader
     """
     try:
-        # Search for the ship on shipnext.com
-        search_url = f"https://www.shipnext.com/search?q={ship_name.replace(' ', '+')}"
+        # Direct URL to Sagittarius Leader vessel page
+        vessel_url = "https://shipnext.com/vessel/9283887-sagittarius-leader"
         
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -58,37 +59,14 @@ def scrape_ship_location(ship_name):
             'Upgrade-Insecure-Requests': '1'
         }
         
-        print(f"Searching for {ship_name} on shipnext.com...")
-        response = requests.get(search_url, headers=headers, timeout=30)
+        print(f"Fetching vessel page from shipnext.com...")
+        response = requests.get(vessel_url, headers=headers, timeout=30)
         response.raise_for_status()
         
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Try to find ship information
-        # Look for ship detail page link
-        ship_links = soup.find_all('a', href=re.compile(r'.*sagittarius.*leader.*', re.I))
-        if not ship_links:
-            ship_links = soup.find_all('a', string=re.compile(r'.*sagittarius.*leader.*', re.I))
-        
-        detail_url = None
-        if ship_links:
-            href = ship_links[0].get('href')
-            if href:
-                if href.startswith('http'):
-                    detail_url = href
-                else:
-                    detail_url = f"https://www.shipnext.com{href}"
-        
-        # Try to extract from search results first
-        location_data = extract_from_shipnext_search(soup, ship_name)
-        
-        # If no data found and we have a detail URL, fetch the detail page
-        if (not location_data or not location_data.get('latitude')) and detail_url:
-            print(f"Fetching detail page: {detail_url}")
-            detail_response = requests.get(detail_url, headers=headers, timeout=30)
-            detail_response.raise_for_status()
-            detail_soup = BeautifulSoup(detail_response.content, 'html.parser')
-            location_data = extract_from_shipnext_detail(detail_soup, ship_name)
+        # Extract destination information from the vessel detail page
+        location_data = extract_from_shipnext_detail(soup, ship_name)
         
         return location_data
         
