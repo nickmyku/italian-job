@@ -164,6 +164,58 @@ def extract_dms_coordinates_from_text(text):
     
     return None, None
 
+def extract_coordinates_after_position_string(text):
+    """
+    Extract coordinates that appear after "Vessel's current position is"
+    Returns tuple (latitude, longitude) or (None, None) if not found
+    """
+    if not text:
+        return None, None
+    
+    # Look for the pattern "Vessel's current position is" followed by coordinates
+    # Try various formats that might follow this string
+    position_patterns = [
+        # Pattern: "Vessel's current position is" followed by DMS format with slash
+        # e.g., "Vessel's current position is 051° 18' 06" N / 003° 14' 14" E"
+        r"Vessel's current position is\s+(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])\s*/\s*(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])",
+        # Pattern: "Vessel's current position is" followed by DMS format with comma
+        r"Vessel's current position is\s+(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS]),\s*(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])",
+        # Pattern: "Vessel's current position is" followed by decimal degrees
+        r"Vessel's current position is\s*[:\-]?\s*(-?\d+\.?\d*)\s*[,/\s]+\s*(-?\d+\.?\d*)",
+    ]
+    
+    for pattern in position_patterns:
+        match = re.search(pattern, text, re.I)
+        if match:
+            # Try to extract as DMS first
+            if len(match.groups()) == 2:
+                lat_str = match.group(1)
+                lon_str = match.group(2)
+                
+                # Check if it looks like DMS format
+                if '°' in lat_str or '°' in lon_str or "'" in lat_str or "'" in lon_str:
+                    lat_result = parse_dms_to_decimal(lat_str)
+                    lon_result = parse_dms_to_decimal(lon_str)
+                    
+                    if lat_result and lon_result:
+                        lat, _ = lat_result
+                        lon, _ = lon_result
+                        if -90 <= lat <= 90 and -180 <= lon <= 180:
+                            print(f"[DEBUG] Found coordinates after 'Vessel's current position is' (DMS): Latitude={lat}, Longitude={lon}")
+                            return lat, lon
+                else:
+                    # Try as decimal degrees
+                    try:
+                        lat = float(lat_str)
+                        lon = float(lon_str)
+                        if -90 <= lat <= 90 and -180 <= lon <= 180:
+                            print(f"[DEBUG] Found coordinates after 'Vessel's current position is' (decimal): Latitude={lat}, Longitude={lon}")
+                            return lat, lon
+                    except ValueError:
+                        continue
+    
+    return None, None
+
 def extract_coordinates_from_text(text):
     """
     Try to extract coordinates from text
@@ -336,6 +388,14 @@ def extract_from_shipnext_detail(soup, ship_name):
     
     # Extract text content
     text_content = soup.get_text()
+    
+    # FIRST PRIORITY: Look for coordinates after "Vessel's current position is"
+    if not location_data['latitude']:
+        lat, lon = extract_coordinates_after_position_string(text_content)
+        if lat and lon:
+            location_data['latitude'] = lat
+            location_data['longitude'] = lon
+            print(f"[DEBUG] Coordinates extracted from 'Vessel's current position is': Latitude={lat}, Longitude={lon}")
     
     # Try to find coordinates in text
     if not location_data['latitude']:
