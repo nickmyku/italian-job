@@ -25,7 +25,7 @@ Start the Flask server:
 python app.py
 ```
 
-The application will be available at `http://localhost:5000`
+The application will be available at `http://localhost:3000`
 
 ## How It Works
 
