@@ -32,29 +32,47 @@ function updateMap(locationData) {
         map.removeLayer(shipMarker);
     }
     
-    // Create custom boat icon using SVG
-    const boatIconSvg = `
-        <svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="25" cy="25" r="22" fill="#ffffff" stroke="#667eea" stroke-width="2.5" opacity="0.95"/>
-            <g transform="translate(25, 25)">
-                <!-- Boat hull -->
-                <path d="M -15 5 L -10 -5 L 10 -5 L 15 5 L 15 8 L -15 8 Z" fill="#667eea"/>
-                <!-- Mast -->
-                <line x1="0" y1="-5" x2="0" y2="5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-                <!-- Sail -->
-                <path d="M 0 -5 L 0 5 L 8 0 Z" fill="#ffffff" opacity="0.9"/>
-                <!-- Flag -->
-                <path d="M 0 -5 L 5 -8 L 0 -7 Z" fill="#ff6b6b"/>
+    // Create custom cargo ship icon using SVG
+    const cargoShipIconSvg = `
+        <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+            <!-- Background circle -->
+            <circle cx="30" cy="30" r="26" fill="#ffffff" stroke="#667eea" stroke-width="2.5" opacity="0.95"/>
+            <g transform="translate(30, 30)">
+                <!-- Ship hull -->
+                <path d="M -20 8 L -18 5 L 18 5 L 20 8 L 20 12 L -20 12 Z" fill="#2c3e50"/>
+                <!-- Ship deck -->
+                <rect x="-18" y="5" width="36" height="3" fill="#34495e"/>
+                <!-- Cargo containers -->
+                <rect x="-15" y="-2" width="6" height="7" fill="#e74c3c"/>
+                <rect x="-8" y="-2" width="6" height="7" fill="#3498db"/>
+                <rect x="-1" y="-2" width="6" height="7" fill="#f39c12"/>
+                <rect x="6" y="-2" width="6" height="7" fill="#27ae60"/>
+                <rect x="13" y="-2" width="4" height="7" fill="#9b59b6"/>
+                <!-- Second row of containers -->
+                <rect x="-12" y="-9" width="5" height="7" fill="#e67e22"/>
+                <rect x="-6" y="-9" width="5" height="7" fill="#1abc9c"/>
+                <rect x="0" y="-9" width="5" height="7" fill="#e74c3c"/>
+                <rect x="6" y="-9" width="5" height="7" fill="#3498db"/>
+                <!-- Ship bridge/superstructure -->
+                <rect x="8" y="-15" width="8" height="20" fill="#34495e"/>
+                <rect x="9" y="-14" width="6" height="6" fill="#ecf0f1" opacity="0.8"/>
+                <!-- Container lines -->
+                <line x1="-15" y1="-2" x2="-15" y2="5" stroke="#000" stroke-width="0.3" opacity="0.3"/>
+                <line x1="-9" y1="-2" x2="-9" y2="5" stroke="#000" stroke-width="0.3" opacity="0.3"/>
+                <line x1="-3" y1="-2" x2="-3" y2="5" stroke="#000" stroke-width="0.3" opacity="0.3"/>
+                <line x1="3" y1="-2" x2="3" y2="5" stroke="#000" stroke-width="0.3" opacity="0.3"/>
+                <line x1="9" y1="-2" x2="9" y2="5" stroke="#000" stroke-width="0.3" opacity="0.3"/>
+                <line x1="15" y1="-2" x2="15" y2="5" stroke="#000" stroke-width="0.3" opacity="0.3"/>
             </g>
         </svg>
     `;
     
     const shipIcon = L.divIcon({
         className: 'ship-marker',
-        html: boatIconSvg,
-        iconSize: [50, 50],
-        iconAnchor: [25, 25],
-        popupAnchor: [0, -25]
+        html: cargoShipIconSvg,
+        iconSize: [60, 60],
+        iconAnchor: [30, 30],
+        popupAnchor: [0, -30]
     });
     
     // Add marker
