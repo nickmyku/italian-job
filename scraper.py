@@ -258,22 +258,35 @@ def scrape_ship_location(ship_name):
         vessel_url = "https://shipnext.com/vessel/9283887-sagittarius-leader"
         
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         
         print(f"Fetching vessel page from shipnext.com...")
         response = requests.get(vessel_url, headers=headers, timeout=30)
         response.raise_for_status()
         
-        soup = BeautifulSoup(response.content, 'html.parser')
+        # Ensure proper encoding
+        response.encoding = response.apparent_encoding or 'utf-8'
+        
+        # Store response text BEFORE parsing (BeautifulSoup might affect response object)
+        response_text = response.text
+        
+        # Debug: Check if position string is in response text
+        print(f"[DEBUG] Response text length: {len(response_text)}")
+        print(f"[DEBUG] 'Vessel' in response_text: {'Vessel' in response_text}")
+        print(f"[DEBUG] 'current position' in response_text: {'current position' in response_text.lower()}")
+        
+        # Use html.parser (more reliable for text extraction)
+        soup = BeautifulSoup(response_text, 'html.parser')
+        
+        # Debug: Check if position string is in parsed text
+        parsed_text = soup.get_text()
+        print(f"[DEBUG] Parsed text length: {len(parsed_text)}")
+        print(f"[DEBUG] 'Vessel' in parsed_text: {'Vessel' in parsed_text}")
+        print(f"[DEBUG] 'current position' in parsed_text: {'current position' in parsed_text.lower()}")
         
         # Extract destination information from the vessel detail page
-        location_data = extract_from_shipnext_detail(soup, ship_name)
+        location_data = extract_from_shipnext_detail(soup, ship_name, response_text=response_text)
         
         # Print final coordinates for debugging
         if location_data and location_data.get('latitude') and location_data.get('longitude'):
@@ -359,7 +372,7 @@ def extract_from_shipnext_search(soup, ship_name):
     
     return location_data if location_data['latitude'] or location_data['location_text'] else None
 
-def extract_from_shipnext_detail(soup, ship_name):
+def extract_from_shipnext_detail(soup, ship_name, response_text=None):
     """Extract destination/location data from shipnext.com detail page"""
     location_data = {
         'location_text': None,
@@ -390,12 +403,26 @@ def extract_from_shipnext_detail(soup, ship_name):
     text_content = soup.get_text()
     
     # FIRST PRIORITY: Look for coordinates after "Vessel's current position is"
-    if not location_data['latitude']:
-        lat, lon = extract_coordinates_after_position_string(text_content)
-        if lat and lon:
-            location_data['latitude'] = lat
-            location_data['longitude'] = lon
-            print(f"[DEBUG] Coordinates extracted from 'Vessel's current position is': Latitude={lat}, Longitude={lon}")
+    # Try with parsed text first
+    print(f"[DEBUG] Checking for position string in text (text length: {len(text_content)})...")
+    lat, lon = extract_coordinates_after_position_string(text_content)
+    
+    # If not found in parsed text, try raw HTML (position string might be in script or special tags)
+    if (not lat or not lon) and response_text:
+        print(f"[DEBUG] Trying raw HTML text (length: {len(response_text)})...")
+        lat, lon = extract_coordinates_after_position_string(response_text)
+    
+    print(f"[DEBUG] Position string extraction returned: lat={lat}, lon={lon}")
+    if lat and lon:
+        location_data['latitude'] = lat
+        location_data['longitude'] = lon
+        print(f"[DEBUG] Coordinates extracted from 'Vessel's current position is': Latitude={lat}, Longitude={lon}")
+    else:
+        print(f"[DEBUG] Position string extraction failed, checking if 'Vessel' in text: {'Vessel' in text_content}")
+        print(f"[DEBUG] Checking if 'current position' in text: {'current position' in text_content.lower()}")
+        if response_text:
+            print(f"[DEBUG] Checking if 'Vessel' in raw HTML: {'Vessel' in response_text}")
+            print(f"[DEBUG] Checking if 'current position' in raw HTML: {'current position' in response_text.lower()}")
     
     # Try to find coordinates in text (only if not found above)
     if not location_data['latitude']:
