@@ -139,6 +139,7 @@ def extract_dms_coordinates_from_text(text):
                 lon = -lon
             
             if -90 <= lat <= 90 and -180 <= lon <= 180:
+                printf( lat, lon)
                 return lat, lon
         except (ValueError, IndexError):
             pass
@@ -157,6 +158,7 @@ def extract_dms_coordinates_from_text(text):
             lat, _ = lat_result
             lon, _ = lon_result
             if -90 <= lat <= 90 and -180 <= lon <= 180:
+                printf( lat, lon)
                 return lat, lon
     
     return None, None
