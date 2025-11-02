@@ -36,12 +36,12 @@ def parse_dms_to_decimal(dms_str):
     # Pattern for DMS format: degrees?minutes'seconds"hemisphere
     # Supports various separators and formats
     patterns = [
-        # Standard format: 40?42'46"N or 40? 42' 46" N
-        r'(\d+)[?\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"\s]*([NSEW])',
+        # Standard format: 40°42'46"N or 40° 42' 46" N
+        r'(\d+)[°\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"\s]*([NSEW])',
         # Alternative format: 40 deg 42 min 46 sec N
-        r'(\d+)\s*(?:deg|degree|?)\s+(\d+)\s*(?:min|minute|\')\s+(\d+(?:\.\d+)?)\s*(?:sec|second|\")?\s*([NSEW])',
-        # With decimal seconds: 40?42'46.5"N
-        r'(\d+)[?\s]+(\d+)[\'\s]+(\d+\.\d+)[\"\s]*([NSEW])',
+        r'(\d+)\s*(?:deg|degree|°)\s+(\d+)\s*(?:min|minute|\')\s+(\d+(?:\.\d+)?)\s*(?:sec|second|\")?\s*([NSEW])',
+        # With decimal seconds: 40°42'46.5"N
+        r'(\d+)[°\s]+(\d+)[\'\s]+(\d+\.\d+)[\"\s]*([NSEW])',
     ]
     
     for pattern in patterns:
@@ -76,8 +76,8 @@ def extract_dms_coordinates_from_text(text):
     
     # Look for latitude patterns (N/S)
     lat_patterns = [
-        r'Lat[itude]*[:]?\s*(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])',
-        r'(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])',
+        r'Lat[itude]*[:]?\s*(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])',
+        r'(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])',
     ]
     
     lat_dms = None
@@ -89,8 +89,8 @@ def extract_dms_coordinates_from_text(text):
     
     # Look for longitude patterns (E/W)
     lon_patterns = [
-        r'Lon[gitude]*[:]?\s*(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])',
-        r'(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])',
+        r'Lon[gitude]*[:]?\s*(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])',
+        r'(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])',
     ]
     
     lon_dms = None
@@ -113,8 +113,8 @@ def extract_dms_coordinates_from_text(text):
                 return lat, lon
     
     # Try to find DMS coordinates in pairs with forward slash separator
-    # Pattern: 051? 18' 06" N / 003? 14' 14" E
-    slash_pattern = r'(\d+)[?\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"]?\s*([NS])\s*/\s*(\d+)[?\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"]?\s*([EW])'
+    # Pattern: 051° 18' 06" N / 003° 14' 14" E
+    slash_pattern = r'(\d+)[°\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"]?\s*([NS])\s*/\s*(\d+)[°\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"]?\s*([EW])'
     slash_match = re.search(slash_pattern, text, re.I)
     if slash_match:
         try:
@@ -139,14 +139,14 @@ def extract_dms_coordinates_from_text(text):
                 lon = -lon
             
             if -90 <= lat <= 90 and -180 <= lon <= 180:
-                printf( lat, lon)
+ lat, lon)
                 return lat, lon
         except (ValueError, IndexError):
             pass
     
     # Try to find DMS coordinates in pairs (common format: lat, lon)
-    # Pattern: 40?42'46"N, 74?00'21"W or similar
-    pair_pattern = r'(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])[,\s]+(\d+[?\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])'
+    # Pattern: 40°42'46"N, 74°00'21"W or similar
+    pair_pattern = r'(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[NS])[,\s]+(\d+[°\s]+\d+[\'\s]+\d+(?:\.\d+)?[\"]?\s*[EW])'
     pair_match = re.search(pair_pattern, text, re.I)
     if pair_match:
         lat_dms = pair_match.group(1)
@@ -158,7 +158,7 @@ def extract_dms_coordinates_from_text(text):
             lat, _ = lat_result
             lon, _ = lon_result
             if -90 <= lat <= 90 and -180 <= lon <= 180:
-                printf( lat, lon)
+ lat, lon)
                 return lat, lon
     
     return None, None
