@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, url_for
 from flask_cors import CORS
 import sqlite3
 import os
@@ -6,7 +6,7 @@ from datetime import datetime
 from scraper import scrape_ship_location
 from scheduler import start_scheduler
 
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
 
 DB_PATH = 'ship_locations.db'
