@@ -33,7 +33,22 @@ def init_db():
 @app.route('/')
 def index():
     """Serve the main HTML page"""
-    return send_from_directory('static', 'index.html')
+    response = send_from_directory('static', 'index.html')
+    # Add cache control headers to prevent caching issues
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+# Explicit routes for static files to ensure they're served correctly
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    """Serve static files"""
+    response = send_from_directory('static', filename)
+    # Add cache headers for static files
+    if filename.endswith('.js') or filename.endswith('.css'):
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+    return response
 
 @app.route('/api/location')
 def get_location():
