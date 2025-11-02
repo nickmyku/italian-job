@@ -110,6 +110,7 @@ def extract_dms_coordinates_from_text(text):
             lon, _ = lon_result
             # Validate reasonable coordinates
             if -90 <= lat <= 90 and -180 <= lon <= 180:
+                print(f"[DEBUG] Found coordinates from DMS lat/lon patterns: Latitude={lat}, Longitude={lon}")
                 return lat, lon
     
     # Try to find DMS coordinates in pairs with forward slash separator
@@ -139,6 +140,7 @@ def extract_dms_coordinates_from_text(text):
                 lon = -lon
             
             if -90 <= lat <= 90 and -180 <= lon <= 180:
+                print(f"[DEBUG] Found coordinates from slash pattern: Latitude={lat}, Longitude={lon}")
                 return lat, lon
         except (ValueError, IndexError):
             pass
@@ -157,6 +159,7 @@ def extract_dms_coordinates_from_text(text):
             lat, _ = lat_result
             lon, _ = lon_result
             if -90 <= lat <= 90 and -180 <= lon <= 180:
+                print(f"[DEBUG] Found coordinates from pair pattern: Latitude={lat}, Longitude={lon}")
                 return lat, lon
     
     return None, None
@@ -172,6 +175,7 @@ def extract_coordinates_from_text(text):
     # First try DMS format (degrees, minutes, seconds)
     lat, lon = extract_dms_coordinates_from_text(text)
     if lat and lon:
+        print(f"[DEBUG] Extracted DMS coordinates: Latitude={lat}, Longitude={lon}")
         return lat, lon
     
     # Fallback to decimal degrees format
@@ -185,6 +189,7 @@ def extract_coordinates_from_text(text):
             lon = float(matches[0][1])
             # Validate reasonable coordinates
             if -90 <= lat <= 90 and -180 <= lon <= 180:
+                print(f"[DEBUG] Extracted decimal coordinates: Latitude={lat}, Longitude={lon}")
                 return lat, lon
         except ValueError:
             pass
@@ -217,6 +222,14 @@ def scrape_ship_location(ship_name):
         
         # Extract destination information from the vessel detail page
         location_data = extract_from_shipnext_detail(soup, ship_name)
+        
+        # Print final coordinates for debugging
+        if location_data and location_data.get('latitude') and location_data.get('longitude'):
+            print(f"[DEBUG] Final ship coordinates: Latitude={location_data['latitude']}, Longitude={location_data['longitude']}")
+        elif location_data:
+            print(f"[DEBUG] Location data found but no coordinates. Location text: {location_data.get('location_text', 'N/A')}")
+        else:
+            print("[DEBUG] No location data found")
         
         return location_data
         
@@ -266,6 +279,7 @@ def extract_from_shipnext_search(soup, ship_name):
     if lat and lon:
         location_data['latitude'] = lat
         location_data['longitude'] = lon
+        print(f"[DEBUG] Coordinates extracted from search results: Latitude={lat}, Longitude={lon}")
     
     # If we have destination text but no coordinates, try geocoding
     if location_data['location_text'] and not location_data['latitude']:
@@ -273,6 +287,7 @@ def extract_from_shipnext_search(soup, ship_name):
         if lat and lon:
             location_data['latitude'] = lat
             location_data['longitude'] = lon
+            print(f"[DEBUG] Coordinates geocoded from location text: Latitude={lat}, Longitude={lon}")
     
     # Extract speed if available
     speed_match = re.search(r'Speed[:\s]+([\d.]+)\s*(?:knots?|kn)?', text_content, re.I)
@@ -314,6 +329,7 @@ def extract_from_shipnext_detail(soup, ship_name):
                 try:
                     location_data['latitude'] = float(lat_match.group(1))
                     location_data['longitude'] = float(lng_match.group(1))
+                    print(f"[DEBUG] Coordinates found in JavaScript: Latitude={location_data['latitude']}, Longitude={location_data['longitude']}")
                     break
                 except ValueError:
                     pass
@@ -327,6 +343,7 @@ def extract_from_shipnext_detail(soup, ship_name):
         if lat and lon:
             location_data['latitude'] = lat
             location_data['longitude'] = lon
+            print(f"[DEBUG] Coordinates extracted from detail page text: Latitude={lat}, Longitude={lon}")
     
     # Look for destination port information (ShipNext focus)
     destination_patterns = [
@@ -359,6 +376,7 @@ def extract_from_shipnext_detail(soup, ship_name):
         if lat and lon:
             location_data['latitude'] = lat
             location_data['longitude'] = lon
+            print(f"[DEBUG] Coordinates geocoded from destination text: Latitude={lat}, Longitude={lon}")
     
     # Extract speed if available
     speed_match = re.search(r'Speed[:\s]+([\d.]+)\s*(?:knots?|kn)?', text_content, re.I)
