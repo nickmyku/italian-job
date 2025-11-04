@@ -28,7 +28,9 @@ def update_ship_location():
             ))
             conn.commit()
             conn.close()
-            print(f"[{datetime.now()}] Location updated successfully: {location_data.get('latitude')}, {location_data.get('longitude')}")
+            speed_info = f", Speed: {location_data.get('speed')}" if location_data.get('speed') else ""
+            heading_info = f", Heading: {location_data.get('heading')}" if location_data.get('heading') else ""
+            print(f"[{datetime.now()}] Location updated successfully: {location_data.get('latitude')}, {location_data.get('longitude')}{speed_info}{heading_info}")
         else:
             print(f"[{datetime.now()}] Failed to retrieve location data")
     except Exception as e:
