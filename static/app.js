@@ -19,8 +19,21 @@ function initMap() {
 
 // Update map with ship location
 function updateMap(locationData) {
-    if (!locationData || !locationData.latitude || !locationData.longitude) {
+    if (!locationData) {
+        showStatus('No destination data available', 'error');
+        return;
+    }
+    
+    // Update info panel first (even if no coordinates)
+    updateInfoPanel(locationData);
+    
+    // Only update map if we have coordinates
+    if (!locationData.latitude || !locationData.longitude) {
+        if (locationData.location_text) {
+            showStatus('Destination found but no coordinates available', 'success');
+        } else {
             showStatus('No destination data available', 'error');
+        }
         return;
     }
     
