@@ -396,13 +396,28 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
     for elem in destination_elements + destination_data_attrs:
         text = elem.get_text(strip=True)
         if text and len(text) < 100:  # Reasonable destination name length
-            # Skip if it looks like coordinates or a date
-            if not re.match(r'^-?\d+\.?\d*[,\s]+-?\d+\.?\d*$', text) and \
+            # Skip if it looks like coordinates, a date, or button/navigation text
+            text_lower = text.lower()
+            skip_patterns = [
+                r'^(show|click|view|see|more|less|add|edit|delete|submit|cancel|close|open|menu|nav|link)',
+                r'(button|link|menu|nav|tab|icon|arrow|chevron)',
+                r'(trading desk|position|add position|manage)',
+            ]
+            should_skip = False
+            for pattern in skip_patterns:
+                if re.search(pattern, text_lower, re.I):
+                    should_skip = True
+                    break
+            
+            if not should_skip and \
+               not re.match(r'^-?\d+\.?\d*[,\s]+-?\d+\.?\d*$', text) and \
                not re.match(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', text) and \
-               len(text) > 2:
-                location_data['location_text'] = text
-                print(f"[DEBUG] Destination found in HTML element: {location_data['location_text']}")
-                break
+               len(text) > 2 and len(text) < 80:  # Reasonable port name length
+                # Only accept if it looks like a place name (contains letters, possibly numbers)
+                if re.search(r'[a-zA-Z]{3,}', text):  # Has at least 3 consecutive letters
+                    location_data['location_text'] = text
+                    print(f"[DEBUG] Destination found in HTML element: {location_data['location_text']}")
+                    break
     
     # Also check table structures - common on ship tracking sites
     # Look for table rows with "Destination" or "Port" labels
@@ -496,8 +511,9 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
             print(f"[DEBUG] Coordinates extracted from detail page text: Latitude={lat}, Longitude={lon}")
     
     # Look for destination port information (ShipNext focus)
-    # Only extract if we haven't found destination yet
-    if not location_data['location_text']:
+    # Try text patterns FIRST (more reliable than HTML element matching)
+    # This will override HTML element matching if it finds a better match
+    if True:  # Always check text patterns to find the best destination
         destination_patterns = [
             r'Destination[:\s]+([^,\n\r]+)',
             r'To[:\s]+([^,\n\r]+)',
@@ -527,7 +543,8 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                 # Skip if it looks like a date, coordinates, or too short
                 if not re.match(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', location_text) and \
                    not re.match(r'^-?\d+\.?\d*[,\s]+-?\d+\.?\d*$', location_text) and \
-                   len(location_text) > 2 and len(location_text) < 100:
+                   len(location_text) > 2 and len(location_text) < 100 and \
+                   re.search(r'[a-zA-Z]{3,}', location_text):  # Must have letters (place name)
                     location_data['location_text'] = location_text
                     print(f"[DEBUG] Destination extracted from text pattern: {location_data['location_text']}")
                     break
@@ -546,7 +563,8 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                     # Skip if it looks like a date, coordinates, or too short
                     if not re.match(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', location_text) and \
                        not re.match(r'^-?\d+\.?\d*[,\s]+-?\d+\.?\d*$', location_text) and \
-                       len(location_text) > 2 and len(location_text) < 100:
+                       len(location_text) > 2 and len(location_text) < 100 and \
+                       re.search(r'[a-zA-Z]{3,}', location_text):  # Must have letters (place name)
                         location_data['location_text'] = location_text
                         print(f"[DEBUG] Destination extracted from raw HTML: {location_data['location_text']}")
                         break
