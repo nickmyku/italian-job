@@ -123,7 +123,7 @@ HTML structure with:
 - Info panel showing: Last Updated, Destination, Speed, Heading, Coordinates
 - Map container (`<div id="map">`)
 - History panel with clickable location entries
-- Control buttons: "Update Destination Now" and "Refresh Map"
+- Control buttons: "Get Current Location" and "Center Map"
 - Status message area
 
 ### static/styles.css
