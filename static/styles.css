@@ -45,7 +45,7 @@ header h1 {
     gap: 15px;
     align-items: center;
     background: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
+    border-top: 1px solid #e9ecef;
 }
 
 .btn-primary, .btn-secondary {
