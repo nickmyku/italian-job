@@ -35,18 +35,17 @@ def update_ship_location():
         print(f"[{datetime.now()}] Error updating location: {e}")
 
 def start_scheduler():
-    """Start the background scheduler for daily updates"""
+    """Start the background scheduler for updates every 6 hours"""
     scheduler = BackgroundScheduler()
-    # Schedule update daily at 00:00 UTC (adjust timezone as needed)
+    # Schedule update every 6 hours
     scheduler.add_job(
         update_ship_location,
-        'cron',
-        hour=0,
-        minute=0,
-        id='daily_ship_update'
+        'interval',
+        hours=6,
+        id='ship_update'
     )
     scheduler.start()
-    print("Scheduler started. Daily updates scheduled for 00:00 UTC.")
+    print("Scheduler started. Updates scheduled every 6 hours.")
     
     # Run initial update
     update_ship_location()
