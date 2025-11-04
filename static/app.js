@@ -104,7 +104,7 @@ function updateMap(locationData) {
         popupContent += `Heading: ${locationData.heading}°`;
     }
     
-    shipMarker.bindPopup(popupContent).openPopup();
+    shipMarker.bindPopup(popupContent);
     
     // Center map on ship
     map.setView([lat, lon], 6);
