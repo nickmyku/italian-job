@@ -382,6 +382,9 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         'heading': None
     }
     
+    # Normalize ship name for comparison (case-insensitive, strip whitespace)
+    ship_name_normalized = ship_name.strip().lower() if ship_name else ''
+    
     # FIRST: Try to extract destination from HTML elements before coordinates
     # Look for destination in common HTML structures
     destination_elements = soup.find_all(['div', 'span', 'td', 'dd', 'p'], 
@@ -396,25 +399,42 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
     for elem in destination_elements + destination_data_attrs:
         text = elem.get_text(strip=True)
         if text and len(text) < 100:  # Reasonable destination name length
-            # Skip if it looks like coordinates, a date, or button/navigation text
+            # Skip if it looks like coordinates, a date, button/navigation text, or generic labels
             text_lower = text.lower()
             skip_patterns = [
                 r'^(show|click|view|see|more|less|add|edit|delete|submit|cancel|close|open|menu|nav|link)',
                 r'(button|link|menu|nav|tab|icon|arrow|chevron)',
                 r'(trading desk|position|add position|manage)',
+                r'^(vessel|ship|boat).*status$',
+                r'status$',
+                r'latest.*AIS.*Satellite.*data',
+                r'AIS.*Satellite.*data',
+                r'Satellite.*AIS.*data',
+                r'latest.*data',
+                r'real.*time.*data',
+                r'tracking.*data',
             ]
             should_skip = False
             for pattern in skip_patterns:
                 if re.search(pattern, text_lower, re.I):
                     should_skip = True
+                    print(f"[DEBUG] Skipping HTML element text (generic): {text}")
                     break
             
             if not should_skip and \
                not re.match(r'^-?\d+\.?\d*[,\s]+-?\d+\.?\d*$', text) and \
                not re.match(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', text) and \
                len(text) > 2 and len(text) < 80:  # Reasonable port name length
+                # Skip if it matches the ship name
+                if ship_name_normalized and text.strip().lower() == ship_name_normalized:
+                    print(f"[DEBUG] Skipping HTML element text (ship name): {text}")
+                    should_skip = True
+                
                 # Only accept if it looks like a place name (contains letters, possibly numbers)
-                if re.search(r'[a-zA-Z]{3,}', text):  # Has at least 3 consecutive letters
+                # Also check that it doesn't end with common non-place suffixes
+                if not should_skip and \
+                   re.search(r'[a-zA-Z]{3,}', text) and \
+                   not re.search(r'(data|status|info|details|more|click|here)$', text_lower):
                     location_data['location_text'] = text
                     print(f"[DEBUG] Destination found in HTML element: {location_data['location_text']}")
                     break
@@ -540,8 +560,35 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                 location_text = location_text.split(',')[0].strip()
                 location_text = location_text.split('\n')[0].strip()
                 location_text = location_text.split('/')[0].strip()  # Sometimes "Port A / Port B"
-                # Skip if it looks like a date, coordinates, or too short
-                if not re.match(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', location_text) and \
+                
+                # Skip generic metadata/advertising phrases
+                skip_phrases = [
+                    r'latest.*AIS.*Satellite.*data',
+                    r'AIS.*Satellite.*data',
+                    r'Satellite.*AIS.*data',
+                    r'latest.*data',
+                    r'real.*time.*data',
+                    r'tracking.*data',
+                    r'vessel.*status',
+                    r'ship.*status',
+                    r'position.*data',
+                    r'location.*data',
+                    r'click.*here',
+                    r'show.*more',
+                    r'view.*details',
+                    r'see.*more',
+                ]
+                should_skip = False
+                location_text_lower = location_text.lower()
+                for phrase in skip_phrases:
+                    if re.search(phrase, location_text_lower, re.I):
+                        should_skip = True
+                        print(f"[DEBUG] Skipping generic phrase: {location_text}")
+                        break
+                
+                # Skip if it looks like a date, coordinates, too short, or generic phrase
+                if not should_skip and \
+                   not re.match(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', location_text) and \
                    not re.match(r'^-?\d+\.?\d*[,\s]+-?\d+\.?\d*$', location_text) and \
                    len(location_text) > 2 and len(location_text) < 100 and \
                    re.search(r'[a-zA-Z]{3,}', location_text):  # Must have letters (place name)
@@ -560,8 +607,35 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                     location_text = location_text.split(',')[0].strip()
                     location_text = location_text.split('\n')[0].strip()
                     location_text = location_text.split('/')[0].strip()
-                    # Skip if it looks like a date, coordinates, or too short
-                    if not re.match(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', location_text) and \
+                    
+                    # Skip generic metadata/advertising phrases
+                    skip_phrases = [
+                        r'latest.*AIS.*Satellite.*data',
+                        r'AIS.*Satellite.*data',
+                        r'Satellite.*AIS.*data',
+                        r'latest.*data',
+                        r'real.*time.*data',
+                        r'tracking.*data',
+                        r'vessel.*status',
+                        r'ship.*status',
+                        r'position.*data',
+                        r'location.*data',
+                        r'click.*here',
+                        r'show.*more',
+                        r'view.*details',
+                        r'see.*more',
+                    ]
+                    should_skip = False
+                    location_text_lower = location_text.lower()
+                    for phrase in skip_phrases:
+                        if re.search(phrase, location_text_lower, re.I):
+                            should_skip = True
+                            print(f"[DEBUG] Skipping generic phrase: {location_text}")
+                            break
+                    
+                    # Skip if it looks like a date, coordinates, too short, or generic phrase
+                    if not should_skip and \
+                       not re.match(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', location_text) and \
                        not re.match(r'^-?\d+\.?\d*[,\s]+-?\d+\.?\d*$', location_text) and \
                        len(location_text) > 2 and len(location_text) < 100 and \
                        re.search(r'[a-zA-Z]{3,}', location_text):  # Must have letters (place name)
