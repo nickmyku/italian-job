@@ -100,8 +100,8 @@ function updateMap(locationData) {
     if (locationData.speed) {
         popupContent += `Speed: ${locationData.speed} knots<br>`;
     }
-    if (locationData.heading) {
-        popupContent += `Heading: ${locationData.heading}°`;
+    if (locationData.heading != null) {
+        popupContent += `Heading: ${locationData.heading}\u00B0`;
     }
     
     shipMarker.bindPopup(popupContent).openPopup();
@@ -125,7 +125,7 @@ function updateInfoPanel(data) {
     document.getElementById('speed').textContent = 
         data.speed ? `${data.speed} knots` : '-';
     document.getElementById('heading').textContent = 
-        data.heading ? `${data.heading}°` : '-';
+        data.heading != null ? `${data.heading}\u00B0` : '-';
     
     if (data.latitude && data.longitude) {
         document.getElementById('coordinates').textContent = 
