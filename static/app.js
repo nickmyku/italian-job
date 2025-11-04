@@ -97,10 +97,10 @@ function updateMap(locationData) {
         popupContent += `Destination: ${locationData.location_text}<br>`;
     }
     popupContent += `Coordinates: ${lat.toFixed(6)}, ${lon.toFixed(6)}<br>`;
-    if (locationData.speed) {
+    if (locationData.speed !== null && locationData.speed !== undefined) {
         popupContent += `Speed: ${locationData.speed} knots<br>`;
     }
-    if (locationData.heading) {
+    if (locationData.heading !== null && locationData.heading !== undefined) {
         popupContent += `Heading: ${locationData.heading}°`;
     }
     
@@ -123,9 +123,9 @@ function updateInfoPanel(data) {
     document.getElementById('locationText').textContent = 
         data.location_text || 'Unknown';
     document.getElementById('speed').textContent = 
-        data.speed ? `${data.speed} knots` : '-';
+        (data.speed !== null && data.speed !== undefined) ? `${data.speed} knots` : '-';
     document.getElementById('heading').textContent = 
-        data.heading ? `${data.heading}°` : '-';
+        (data.heading !== null && data.heading !== undefined) ? `${data.heading}°` : '-';
     
     if (data.latitude && data.longitude) {
         document.getElementById('coordinates').textContent = 

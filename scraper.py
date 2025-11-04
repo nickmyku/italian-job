@@ -651,6 +651,29 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
             location_data['longitude'] = lon
             print(f"[DEBUG] Coordinates geocoded from destination text: Latitude={lat}, Longitude={lon}")
     
+    # FIRST: Try to extract speed from HTML table structures
+    tables = soup.find_all('table')
+    for table in tables:
+        rows = table.find_all('tr')
+        for row in rows:
+            cells = row.find_all(['td', 'th'])
+            if len(cells) >= 2:
+                label_text = cells[0].get_text(strip=True).lower()
+                if any(keyword in label_text for keyword in ['speed', 'sog']):
+                    value_text = cells[1].get_text(strip=True)
+                    # Try to extract numeric value
+                    speed_match = re.search(r'(\d+\.?\d*)', value_text)
+                    if speed_match:
+                        try:
+                            speed_value = float(speed_match.group(1))
+                            location_data['speed'] = speed_value
+                            print(f"[DEBUG] Speed extracted from table: {speed_value}")
+                            break
+                        except ValueError:
+                            pass
+        if location_data.get('speed') is not None:
+            break
+    
     # Extract speed if available - try multiple patterns
     speed_patterns = [
         r'Speed[:\s]+([\d.]+)\s*(?:knots?|kn|kts)?',
@@ -660,20 +683,21 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         r'speed[:\s]*([\d.]+)',
     ]
     
-    # Try text content first
-    for pattern in speed_patterns:
-        speed_match = re.search(pattern, text_content, re.I)
-        if speed_match:
-            try:
-                speed_value = float(speed_match.group(1))
-                location_data['speed'] = speed_value
-                print(f"[DEBUG] Speed extracted: {speed_value}")
-                break
-            except ValueError:
-                continue
+    # Try text content first (only if not already found in table)
+    if location_data.get('speed') is None:
+        for pattern in speed_patterns:
+            speed_match = re.search(pattern, text_content, re.I)
+            if speed_match:
+                try:
+                    speed_value = float(speed_match.group(1))
+                    location_data['speed'] = speed_value
+                    print(f"[DEBUG] Speed extracted from text: {speed_value}")
+                    break
+                except ValueError:
+                    continue
     
     # Also check raw HTML if available
-    if not location_data['speed'] and response_text:
+    if location_data.get('speed') is None and response_text:
         for pattern in speed_patterns:
             speed_match = re.search(pattern, response_text, re.I)
             if speed_match:
@@ -704,8 +728,33 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                             break
                         except ValueError:
                             continue
-                if location_data['speed']:
+                if location_data.get('speed') is not None:
                     break
+    
+    # FIRST: Try to extract heading from HTML table structures
+    tables = soup.find_all('table')
+    for table in tables:
+        rows = table.find_all('tr')
+        for row in rows:
+            cells = row.find_all(['td', 'th'])
+            if len(cells) >= 2:
+                label_text = cells[0].get_text(strip=True).lower()
+                if any(keyword in label_text for keyword in ['heading', 'course', 'cog', 'bearing', 'direction']):
+                    value_text = cells[1].get_text(strip=True)
+                    # Try to extract numeric value
+                    heading_match = re.search(r'(\d+\.?\d*)', value_text)
+                    if heading_match:
+                        try:
+                            heading_value = float(heading_match.group(1))
+                            # Normalize heading to 0-360 range
+                            heading_value = heading_value % 360
+                            location_data['heading'] = heading_value
+                            print(f"[DEBUG] Heading extracted from table: {heading_value}")
+                            break
+                        except ValueError:
+                            pass
+        if location_data.get('heading') is not None:
+            break
     
     # Extract heading if available - try multiple patterns
     heading_patterns = [
@@ -716,24 +765,31 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         r'"heading"[:\s]*([\d.]+)',
         r'heading[:\s]*([\d.]+)',
         r'Bearing[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
+        r'Course\s+Over\s+Ground[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
+        r'COG[:\s]*([\d.]+)',
+        r'course[:\s]*([\d.]+)\s*(?:°|deg|degrees)?',
+        r'Direction[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
+        r'(\d{1,3})\s*°?\s*(?:heading|course|bearing|direction)',  # Match "45° heading" or "45 heading"
+        r'(?:heading|course|bearing)[:\s]*(\d{1,3})\s*°?',  # Match "heading: 45°" or "heading: 45"
     ]
     
-    # Try text content first
-    for pattern in heading_patterns:
-        heading_match = re.search(pattern, text_content, re.I)
-        if heading_match:
-            try:
-                heading_value = float(heading_match.group(1))
-                # Normalize heading to 0-360 range
-                heading_value = heading_value % 360
-                location_data['heading'] = heading_value
-                print(f"[DEBUG] Heading extracted: {heading_value}")
-                break
-            except ValueError:
-                continue
+    # Try text content first (only if not already found in table)
+    if location_data.get('heading') is None:
+        for pattern in heading_patterns:
+            heading_match = re.search(pattern, text_content, re.I)
+            if heading_match:
+                try:
+                    heading_value = float(heading_match.group(1))
+                    # Normalize heading to 0-360 range
+                    heading_value = heading_value % 360
+                    location_data['heading'] = heading_value
+                    print(f"[DEBUG] Heading extracted from text: {heading_value}")
+                    break
+                except ValueError:
+                    continue
     
     # Also check raw HTML if available
-    if not location_data['heading'] and response_text:
+    if location_data.get('heading') is None and response_text:
         for pattern in heading_patterns:
             heading_match = re.search(pattern, response_text, re.I)
             if heading_match:
@@ -748,7 +804,7 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                     continue
     
     # Also check JavaScript/JSON data in script tags for heading
-    if not location_data['heading']:
+    if location_data.get('heading') is None:
         for script in scripts:
             if script.string:
                 heading_patterns_js = [
@@ -769,7 +825,7 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                             break
                         except ValueError:
                             continue
-                if location_data['heading']:
+                if location_data.get('heading') is not None:
                     break
     
     # Return data if we have at least location text or coordinates
@@ -778,5 +834,13 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         print(f"[DEBUG] Final destination text: {location_data['location_text']}")
     if location_data['latitude'] and location_data['longitude']:
         print(f"[DEBUG] Final coordinates: {location_data['latitude']}, {location_data['longitude']}")
+    if location_data.get('speed') is not None:
+        print(f"[DEBUG] Final speed: {location_data['speed']} knots")
+    else:
+        print(f"[DEBUG] Final speed: Not found")
+    if location_data.get('heading') is not None:
+        print(f"[DEBUG] Final heading: {location_data['heading']}°")
+    else:
+        print(f"[DEBUG] Final heading: Not found")
     
     return location_data if (location_data['latitude'] or location_data['location_text']) else None
