@@ -296,6 +296,13 @@ def scrape_ship_location(ship_name):
         else:
             print("[DEBUG] No location data found")
         
+        # Print final speed and heading for debugging
+        if location_data:
+            if location_data.get('speed') is not None:
+                print(f"[DEBUG] Final ship speed: {location_data['speed']} knots")
+            if location_data.get('heading') is not None:
+                print(f"[DEBUG] Final ship heading: {location_data['heading']}°")
+        
         return location_data
         
     except requests.exceptions.RequestException as e:
@@ -778,5 +785,9 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         print(f"[DEBUG] Final destination text: {location_data['location_text']}")
     if location_data['latitude'] and location_data['longitude']:
         print(f"[DEBUG] Final coordinates: {location_data['latitude']}, {location_data['longitude']}")
+    if location_data['speed'] is not None:
+        print(f"[DEBUG] Final ship speed: {location_data['speed']} knots")
+    if location_data['heading'] is not None:
+        print(f"[DEBUG] Final ship heading: {location_data['heading']}°")
     
     return location_data if (location_data['latitude'] or location_data['location_text']) else None
