@@ -781,6 +781,8 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
     
     if location_data['latitude'] and location_data['longitude']:
         print(f"[DEBUG] Final coordinates: {location_data['latitude']}, {location_data['longitude']}")
+    else:
+        print("[DEBUG] WARNING: Coordinates could not be found by the scraper")
     
     if location_data['speed'] is not None:
         print(f"[DEBUG] Final speed: {location_data['speed']}")
