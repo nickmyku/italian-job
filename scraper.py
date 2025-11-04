@@ -716,6 +716,12 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         r'"heading"[:\s]*([\d.]+)',
         r'heading[:\s]*([\d.]+)',
         r'Bearing[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
+        r'Course\s+Over\s+Ground[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
+        r'COG[:\s]*([\d.]+)',
+        r'course[:\s]*([\d.]+)\s*(?:°|deg|degrees)?',
+        r'Direction[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
+        r'(\d{1,3})\s*°?\s*(?:heading|course|bearing|direction)',  # Match "45° heading" or "45 heading"
+        r'(?:heading|course|bearing)[:\s]*(\d{1,3})\s*°?',  # Match "heading: 45°" or "heading: 45"
     ]
     
     # Try text content first
@@ -748,7 +754,7 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                     continue
     
     # Also check JavaScript/JSON data in script tags for heading
-    if not location_data['heading']:
+    if location_data.get('heading') is None:
         for script in scripts:
             if script.string:
                 heading_patterns_js = [
@@ -778,5 +784,13 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         print(f"[DEBUG] Final destination text: {location_data['location_text']}")
     if location_data['latitude'] and location_data['longitude']:
         print(f"[DEBUG] Final coordinates: {location_data['latitude']}, {location_data['longitude']}")
+    if location_data.get('speed') is not None:
+        print(f"[DEBUG] Final speed: {location_data['speed']} knots")
+    else:
+        print(f"[DEBUG] Final speed: Not found")
+    if location_data.get('heading') is not None:
+        print(f"[DEBUG] Final heading: {location_data['heading']}°")
+    else:
+        print(f"[DEBUG] Final heading: Not found")
     
     return location_data if (location_data['latitude'] or location_data['location_text']) else None
