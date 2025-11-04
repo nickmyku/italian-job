@@ -91,21 +91,6 @@ function updateMap(locationData) {
     // Add marker
     shipMarker = L.marker([lat, lon], { icon: shipIcon }).addTo(map);
     
-    // Create popup content
-    let popupContent = `<strong>Sagittarius Leader</strong><br>`;
-    if (locationData.location_text) {
-        popupContent += `Destination: ${locationData.location_text}<br>`;
-    }
-    popupContent += `Coordinates: ${lat.toFixed(6)}, ${lon.toFixed(6)}<br>`;
-    if (locationData.speed) {
-        popupContent += `Speed: ${locationData.speed} knots<br>`;
-    }
-    if (locationData.heading) {
-        popupContent += `Heading: ${locationData.heading}°`;
-    }
-    
-    shipMarker.bindPopup(popupContent).openPopup();
-    
     // Center map on ship
     map.setView([lat, lon], 6);
     
