@@ -673,7 +673,7 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                 continue
     
     # Also check raw HTML if available
-    if not location_data['speed'] and response_text:
+    if location_data.get('speed') is None and response_text:
         for pattern in speed_patterns:
             speed_match = re.search(pattern, response_text, re.I)
             if speed_match:
@@ -704,7 +704,7 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                             break
                         except ValueError:
                             continue
-                if location_data['speed']:
+                if location_data.get('speed') is not None:
                     break
     
     # Extract heading if available - try multiple patterns
@@ -733,7 +733,7 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                 continue
     
     # Also check raw HTML if available
-    if not location_data['heading'] and response_text:
+    if location_data.get('heading') is None and response_text:
         for pattern in heading_patterns:
             heading_match = re.search(pattern, response_text, re.I)
             if heading_match:
@@ -769,7 +769,7 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                             break
                         except ValueError:
                             continue
-                if location_data['heading']:
+                if location_data.get('heading') is not None:
                     break
     
     # Return data if we have at least location text or coordinates
