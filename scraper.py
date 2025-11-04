@@ -465,21 +465,126 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
             location_data['longitude'] = lon
             print(f"[DEBUG] Coordinates geocoded from destination text: Latitude={lat}, Longitude={lon}")
     
-    # Extract speed if available
-    speed_match = re.search(r'Speed[:\s]+([\d.]+)\s*(?:knots?|kn)?', text_content, re.I)
-    if speed_match:
-        try:
-            location_data['speed'] = float(speed_match.group(1))
-        except ValueError:
-            pass
+    # Extract speed if available - try multiple patterns
+    speed_patterns = [
+        r'Speed[:\s]+([\d.]+)\s*(?:knots?|kn|kts)?',
+        r'SOG[:\s]+([\d.]+)\s*(?:knots?|kn|kts)?',  # Speed Over Ground
+        r'speed["\']?\s*[:=]\s*([\d.]+)',
+        r'"speed"[:\s]*([\d.]+)',
+        r'speed[:\s]*([\d.]+)',
+    ]
     
-    # Extract heading if available
-    heading_match = re.search(r'Heading[:\s]+([\d.]+)', text_content, re.I)
-    if heading_match:
-        try:
-            location_data['heading'] = float(heading_match.group(1))
-        except ValueError:
-            pass
+    # Try text content first
+    for pattern in speed_patterns:
+        speed_match = re.search(pattern, text_content, re.I)
+        if speed_match:
+            try:
+                speed_value = float(speed_match.group(1))
+                location_data['speed'] = speed_value
+                print(f"[DEBUG] Speed extracted: {speed_value}")
+                break
+            except ValueError:
+                continue
+    
+    # Also check raw HTML if available
+    if not location_data['speed'] and response_text:
+        for pattern in speed_patterns:
+            speed_match = re.search(pattern, response_text, re.I)
+            if speed_match:
+                try:
+                    speed_value = float(speed_match.group(1))
+                    location_data['speed'] = speed_value
+                    print(f"[DEBUG] Speed extracted from raw HTML: {speed_value}")
+                    break
+                except ValueError:
+                    continue
+    
+    # Also check JavaScript/JSON data in script tags for speed
+    if not location_data['speed']:
+        for script in scripts:
+            if script.string:
+                speed_patterns_js = [
+                    r'speed["\']?\s*[:=]\s*([\d.]+)',
+                    r'"speed"[:\s]*([\d.]+)',
+                    r'speed[:\s]*([\d.]+)',
+                ]
+                for pattern in speed_patterns_js:
+                    speed_match = re.search(pattern, script.string, re.I)
+                    if speed_match:
+                        try:
+                            speed_value = float(speed_match.group(1))
+                            location_data['speed'] = speed_value
+                            print(f"[DEBUG] Speed extracted from JavaScript: {speed_value}")
+                            break
+                        except ValueError:
+                            continue
+                if location_data['speed']:
+                    break
+    
+    # Extract heading if available - try multiple patterns
+    heading_patterns = [
+        r'Heading[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
+        r'COG[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',  # Course Over Ground
+        r'Course[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
+        r'heading["\']?\s*[:=]\s*([\d.]+)',
+        r'"heading"[:\s]*([\d.]+)',
+        r'heading[:\s]*([\d.]+)',
+        r'Bearing[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
+    ]
+    
+    # Try text content first
+    for pattern in heading_patterns:
+        heading_match = re.search(pattern, text_content, re.I)
+        if heading_match:
+            try:
+                heading_value = float(heading_match.group(1))
+                # Normalize heading to 0-360 range
+                heading_value = heading_value % 360
+                location_data['heading'] = heading_value
+                print(f"[DEBUG] Heading extracted: {heading_value}")
+                break
+            except ValueError:
+                continue
+    
+    # Also check raw HTML if available
+    if not location_data['heading'] and response_text:
+        for pattern in heading_patterns:
+            heading_match = re.search(pattern, response_text, re.I)
+            if heading_match:
+                try:
+                    heading_value = float(heading_match.group(1))
+                    # Normalize heading to 0-360 range
+                    heading_value = heading_value % 360
+                    location_data['heading'] = heading_value
+                    print(f"[DEBUG] Heading extracted from raw HTML: {heading_value}")
+                    break
+                except ValueError:
+                    continue
+    
+    # Also check JavaScript/JSON data in script tags for heading
+    if not location_data['heading']:
+        for script in scripts:
+            if script.string:
+                heading_patterns_js = [
+                    r'heading["\']?\s*[:=]\s*([\d.]+)',
+                    r'"heading"[:\s]*([\d.]+)',
+                    r'heading[:\s]*([\d.]+)',
+                    r'course["\']?\s*[:=]\s*([\d.]+)',
+                ]
+                for pattern in heading_patterns_js:
+                    heading_match = re.search(pattern, script.string, re.I)
+                    if heading_match:
+                        try:
+                            heading_value = float(heading_match.group(1))
+                            # Normalize heading to 0-360 range
+                            heading_value = heading_value % 360
+                            location_data['heading'] = heading_value
+                            print(f"[DEBUG] Heading extracted from JavaScript: {heading_value}")
+                            break
+                        except ValueError:
+                            continue
+                if location_data['heading']:
+                    break
     
     # Return data if we have at least location text or coordinates
     return location_data if (location_data['latitude'] or location_data['location_text']) else None
