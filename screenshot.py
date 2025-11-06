@@ -30,7 +30,7 @@ def take_screenshot():
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
-        chrome_options.add_argument('--window-size=800,480')
+        chrome_options.add_argument('--window-size=1280,720')
         chrome_options.add_argument('--disable-extensions')
         chrome_options.add_argument('--disable-software-rasterizer')
         
@@ -78,13 +78,13 @@ def take_screenshot():
         filename = f'ship_location_{timestamp}.bmp'
         filepath = os.path.join(SCREENSHOTS_DIR, filename)
         
-        # Take screenshot (save as PNG first, then convert to BMP)
-        print(f"[{datetime.now()}] Capturing screenshot...")
+        # Take screenshot at 1280x720 (save as PNG first, then convert to BMP)
+        print(f"[{datetime.now()}] Capturing screenshot at 1280x720...")
         temp_png_path = filepath.replace('.bmp', '_temp.png')
         driver.save_screenshot(temp_png_path)
         
-        # Convert PNG to BMP with 800x480 resolution
-        print(f"[{datetime.now()}] Converting to BMP format (800x480)...")
+        # Convert PNG to BMP and resize to 800x480 resolution
+        print(f"[{datetime.now()}] Converting to BMP format and resizing to 800x480...")
         img = Image.open(temp_png_path)
         img_resized = img.resize((800, 480), Image.LANCZOS)
         img_resized.save(filepath, 'BMP')
