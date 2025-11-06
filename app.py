@@ -149,7 +149,7 @@ def list_screenshots():
     screenshots = []
     if os.path.exists(SCREENSHOTS_DIR):
         for filename in sorted(os.listdir(SCREENSHOTS_DIR), reverse=True):
-            if filename.endswith('.png'):
+            if filename.endswith('.bmp'):
                 filepath = os.path.join(SCREENSHOTS_DIR, filename)
                 stat = os.stat(filepath)
                 screenshots.append({
@@ -180,7 +180,7 @@ def get_latest_screenshot():
     if not os.path.exists(SCREENSHOTS_DIR):
         return jsonify({'error': 'No screenshots available'}), 404
     
-    screenshots = [f for f in os.listdir(SCREENSHOTS_DIR) if f.endswith('.png')]
+    screenshots = [f for f in os.listdir(SCREENSHOTS_DIR) if f.endswith('.bmp')]
     if not screenshots:
         return jsonify({'error': 'No screenshots available'}), 404
     

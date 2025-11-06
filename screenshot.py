@@ -6,6 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 import os
 import time
+from PIL import Image
 
 SCREENSHOTS_DIR = 'screenshots'
 APP_URL = 'http://localhost:3000'
@@ -29,7 +30,7 @@ def take_screenshot():
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
-        chrome_options.add_argument('--window-size=1920,1080')
+        chrome_options.add_argument('--window-size=800,480')
         chrome_options.add_argument('--disable-extensions')
         chrome_options.add_argument('--disable-software-rasterizer')
         
@@ -74,14 +75,24 @@ def take_screenshot():
         
         # Generate filename with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'ship_location_{timestamp}.png'
+        filename = f'ship_location_{timestamp}.bmp'
         filepath = os.path.join(SCREENSHOTS_DIR, filename)
         
-        # Take screenshot
+        # Take screenshot (save as PNG first, then convert to BMP)
         print(f"[{datetime.now()}] Capturing screenshot...")
-        driver.save_screenshot(filepath)
+        temp_png_path = filepath.replace('.bmp', '_temp.png')
+        driver.save_screenshot(temp_png_path)
         
-        print(f"[{datetime.now()}] Screenshot saved: {filepath}")
+        # Convert PNG to BMP with 800x480 resolution
+        print(f"[{datetime.now()}] Converting to BMP format (800x480)...")
+        img = Image.open(temp_png_path)
+        img_resized = img.resize((800, 480), Image.LANCZOS)
+        img_resized.save(filepath, 'BMP')
+        
+        # Remove temporary PNG file
+        os.remove(temp_png_path)
+        
+        print(f"[{datetime.now()}] Screenshot saved as BMP: {filepath}")
         
         # Close the browser
         driver.quit()
