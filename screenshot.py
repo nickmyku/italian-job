@@ -1,0 +1,98 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from datetime import datetime
+import os
+import time
+
+SCREENSHOTS_DIR = 'screenshots'
+APP_URL = 'http://localhost:3000'
+
+def ensure_screenshots_dir():
+    """Create screenshots directory if it doesn't exist"""
+    if not os.path.exists(SCREENSHOTS_DIR):
+        os.makedirs(SCREENSHOTS_DIR)
+        print(f"[{datetime.now()}] Created screenshots directory: {SCREENSHOTS_DIR}")
+
+def take_screenshot():
+    """Take a screenshot of the web app showing ship location"""
+    ensure_screenshots_dir()
+    
+    try:
+        print(f"[{datetime.now()}] Starting screenshot capture...")
+        
+        # Configure Chrome options for headless mode
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--window-size=1920,1080')
+        chrome_options.add_argument('--disable-extensions')
+        chrome_options.add_argument('--disable-software-rasterizer')
+        
+        # Set up ChromeDriver
+        driver = None
+        try:
+            # Try to use ChromeDriver from PATH
+            driver = webdriver.Chrome(options=chrome_options)
+        except Exception as e:
+            print(f"[{datetime.now()}] Warning: Could not initialize Chrome driver: {e}")
+            print(f"[{datetime.now()}] Attempting to use ChromeDriverManager...")
+            try:
+                from webdriver_manager.chrome import ChromeDriverManager
+                service = Service(ChromeDriverManager().install())
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+            except ImportError:
+                print(f"[{datetime.now()}] webdriver-manager not available. Please install ChromeDriver manually.")
+                raise
+            except Exception as e2:
+                print(f"[{datetime.now()}] Error with ChromeDriverManager: {e2}")
+                raise
+        
+        if not driver:
+            raise Exception("Failed to initialize Chrome driver")
+        
+        # Navigate to the web app
+        print(f"[{datetime.now()}] Navigating to {APP_URL}...")
+        driver.get(APP_URL)
+        
+        # Wait for the map to load (wait for map container or Leaflet tiles)
+        print(f"[{datetime.now()}] Waiting for page to load...")
+        wait = WebDriverWait(driver, 30)
+        
+        # Wait for either the map container or some key elements to be present
+        try:
+            wait.until(EC.presence_of_element_located(("id", "map")))
+        except Exception as e:
+            print(f"[{datetime.now()}] Warning: Map element not found, proceeding anyway: {e}")
+        
+        # Additional wait for map tiles to load
+        time.sleep(3)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'ship_location_{timestamp}.png'
+        filepath = os.path.join(SCREENSHOTS_DIR, filename)
+        
+        # Take screenshot
+        print(f"[{datetime.now()}] Capturing screenshot...")
+        driver.save_screenshot(filepath)
+        
+        print(f"[{datetime.now()}] Screenshot saved: {filepath}")
+        
+        # Close the browser
+        driver.quit()
+        
+        return filepath
+        
+    except Exception as e:
+        print(f"[{datetime.now()}] Error taking screenshot: {e}")
+        if driver:
+            try:
+                driver.quit()
+            except:
+                pass
+        return None
