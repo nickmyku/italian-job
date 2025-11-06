@@ -143,21 +143,20 @@ def manual_update():
 
 @app.route('/api/screenshots')
 def list_screenshots():
-    """List all available screenshots"""
+    """List all available screenshots (only latest is kept)"""
     ensure_screenshots_dir()
     
     screenshots = []
-    if os.path.exists(SCREENSHOTS_DIR):
-        for filename in sorted(os.listdir(SCREENSHOTS_DIR), reverse=True):
-            if filename.endswith('.bmp'):
-                filepath = os.path.join(SCREENSHOTS_DIR, filename)
-                stat = os.stat(filepath)
-                screenshots.append({
-                    'filename': filename,
-                    'url': f'/api/screenshots/{filename}',
-                    'timestamp': datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                    'size': stat.st_size
-                })
+    # Check for latest screenshot
+    latest_filepath = os.path.join(SCREENSHOTS_DIR, 'latest', 'location.bmp')
+    if os.path.exists(latest_filepath):
+        stat = os.stat(latest_filepath)
+        screenshots.append({
+            'filename': 'latest/location.bmp',
+            'url': '/screenshots/latest/location.bmp',
+            'timestamp': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            'size': stat.st_size
+        })
     
     return jsonify({'screenshots': screenshots})
 
@@ -167,27 +166,27 @@ def get_screenshot(filename):
     ensure_screenshots_dir()
     
     # Security: ensure filename doesn't contain path traversal
-    if '../' in filename or filename not in os.listdir(SCREENSHOTS_DIR):
+    if '../' in filename:
         return jsonify({'error': 'Screenshot not found'}), 404
     
-    return send_from_directory(SCREENSHOTS_DIR, filename)
+    # Handle latest screenshot
+    if filename == 'latest' or filename == 'latest/location.bmp' or filename == 'location.bmp':
+        latest_filepath = os.path.join(SCREENSHOTS_DIR, 'latest', 'location.bmp')
+        if os.path.exists(latest_filepath):
+            return send_from_directory(os.path.join(SCREENSHOTS_DIR, 'latest'), 'location.bmp')
+    
+    return jsonify({'error': 'Screenshot not found'}), 404
 
 @app.route('/api/screenshots/latest')
 def get_latest_screenshot():
     """Get the latest screenshot"""
     ensure_screenshots_dir()
     
-    if not os.path.exists(SCREENSHOTS_DIR):
+    latest_filepath = os.path.join(SCREENSHOTS_DIR, 'latest', 'location.bmp')
+    if not os.path.exists(latest_filepath):
         return jsonify({'error': 'No screenshots available'}), 404
     
-    screenshots = [f for f in os.listdir(SCREENSHOTS_DIR) if f.endswith('.bmp')]
-    if not screenshots:
-        return jsonify({'error': 'No screenshots available'}), 404
-    
-    # Sort by filename (which includes timestamp) to get latest
-    latest = sorted(screenshots, reverse=True)[0]
-    
-    return send_from_directory(SCREENSHOTS_DIR, latest)
+    return send_from_directory(os.path.join(SCREENSHOTS_DIR, 'latest'), 'location.bmp')
 
 @app.route('/screenshots/latest/location.bmp')
 def get_latest_screenshot_bmp():
