@@ -189,6 +189,18 @@ def get_latest_screenshot():
     
     return send_from_directory(SCREENSHOTS_DIR, latest)
 
+@app.route('/screenshots/latest/location.bmp')
+def get_latest_screenshot_bmp():
+    """Serve the latest screenshot at /screenshots/latest/location.bmp"""
+    ensure_screenshots_dir()
+    
+    latest_filepath = os.path.join(SCREENSHOTS_DIR, 'latest', 'location.bmp')
+    
+    if not os.path.exists(latest_filepath):
+        return jsonify({'error': 'Latest screenshot not available'}), 404
+    
+    return send_from_directory(os.path.join(SCREENSHOTS_DIR, 'latest'), 'location.bmp')
+
 if __name__ == '__main__':
     init_db()
     
