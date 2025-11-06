@@ -89,6 +89,15 @@ def take_screenshot():
         img_resized = img.resize((800, 480), Image.LANCZOS)
         img_resized.save(filepath, 'BMP')
         
+        # Also save as latest/location.bmp
+        latest_dir = os.path.join(SCREENSHOTS_DIR, 'latest')
+        ensure_screenshots_dir()  # Ensure base directory exists
+        if not os.path.exists(latest_dir):
+            os.makedirs(latest_dir)
+        latest_filepath = os.path.join(latest_dir, 'location.bmp')
+        img_resized.save(latest_filepath, 'BMP')
+        print(f"[{datetime.now()}] Latest screenshot saved as: {latest_filepath}")
+        
         # Remove temporary PNG file
         os.remove(temp_png_path)
         
