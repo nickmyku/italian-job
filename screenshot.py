@@ -17,6 +17,37 @@ def ensure_screenshots_dir():
         os.makedirs(SCREENSHOTS_DIR)
         print(f"[{datetime.now()}] Created screenshots directory: {SCREENSHOTS_DIR}")
 
+def cleanup_old_screenshots():
+    """Delete all old screenshots to save memory, keeping only the latest"""
+    ensure_screenshots_dir()
+    
+    if not os.path.exists(SCREENSHOTS_DIR):
+        return
+    
+    deleted_count = 0
+    try:
+        # Delete all .bmp files in the main screenshots directory (excluding latest/ subdirectory)
+        for filename in os.listdir(SCREENSHOTS_DIR):
+            filepath = os.path.join(SCREENSHOTS_DIR, filename)
+            
+            # Skip the 'latest' directory
+            if os.path.isdir(filepath) and filename == 'latest':
+                continue
+            
+            # Delete all .bmp files (old timestamped screenshots)
+            if filename.endswith('.bmp') and os.path.isfile(filepath):
+                try:
+                    os.remove(filepath)
+                    deleted_count += 1
+                    print(f"[{datetime.now()}] Deleted old screenshot: {filename}")
+                except Exception as e:
+                    print(f"[{datetime.now()}] Warning: Could not delete {filename}: {e}")
+        
+        if deleted_count > 0:
+            print(f"[{datetime.now()}] Cleaned up {deleted_count} old screenshot(s)")
+    except Exception as e:
+        print(f"[{datetime.now()}] Error during screenshot cleanup: {e}")
+
 def take_screenshot():
     """Take a screenshot of the web app showing ship location"""
     ensure_screenshots_dir()
@@ -73,23 +104,20 @@ def take_screenshot():
         # Additional wait for map tiles to load
         time.sleep(3)
         
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'ship_location_{timestamp}.bmp'
-        filepath = os.path.join(SCREENSHOTS_DIR, filename)
+        # Clean up old screenshots before taking a new one
+        cleanup_old_screenshots()
         
         # Take screenshot at 1280x720 (save as PNG first, then convert to BMP)
         print(f"[{datetime.now()}] Capturing screenshot at 1280x720...")
-        temp_png_path = filepath.replace('.bmp', '_temp.png')
+        temp_png_path = os.path.join(SCREENSHOTS_DIR, 'temp_screenshot.png')
         driver.save_screenshot(temp_png_path)
         
         # Convert PNG to BMP and resize to 800x480 resolution
         print(f"[{datetime.now()}] Converting to BMP format and resizing to 800x480...")
         img = Image.open(temp_png_path)
         img_resized = img.resize((800, 480), Image.LANCZOS)
-        img_resized.save(filepath, 'BMP')
         
-        # Also save as latest/location.bmp
+        # Save only to latest/location.bmp (no timestamped version to save memory)
         latest_dir = os.path.join(SCREENSHOTS_DIR, 'latest')
         ensure_screenshots_dir()  # Ensure base directory exists
         if not os.path.exists(latest_dir):
@@ -101,12 +129,10 @@ def take_screenshot():
         # Remove temporary PNG file
         os.remove(temp_png_path)
         
-        print(f"[{datetime.now()}] Screenshot saved as BMP: {filepath}")
-        
         # Close the browser
         driver.quit()
         
-        return filepath
+        return latest_filepath
         
     except Exception as e:
         print(f"[{datetime.now()}] Error taking screenshot: {e}")
