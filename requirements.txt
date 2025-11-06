@@ -7,3 +7,4 @@ apscheduler==3.10.4
 geopy==2.4.1
 selenium==4.15.2
 webdriver-manager==4.0.1
+Pillow==10.1.0
