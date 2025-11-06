@@ -2,6 +2,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 from datetime import datetime
 from scraper import scrape_ship_location
+from screenshot import take_screenshot
 import sqlite3
 import atexit
 
@@ -73,16 +74,31 @@ def start_scheduler():
         )
         print(f"[{datetime.now()}] Scheduled job 'ship_update' to run every 6 hours.")
     
+    # Schedule screenshot job every hour
+    if not _scheduler.get_job('take_screenshot'):
+        _scheduler.add_job(
+            take_screenshot,
+            'interval',
+            hours=1,
+            id='take_screenshot',
+            replace_existing=True
+        )
+        print(f"[{datetime.now()}] Scheduled job 'take_screenshot' to run every hour.")
+    
     # Start scheduler
     if not _scheduler.running:
         _scheduler.start()
         print(f"[{datetime.now()}] Scheduler started. Updates scheduled every 6 hours.")
         
-        # Print next run time
-        job = _scheduler.get_job('ship_update')
-        if job:
-            next_run = job.next_run_time
-            print(f"[{datetime.now()}] Next scheduled update: {next_run}")
+        # Print next run times
+        ship_job = _scheduler.get_job('ship_update')
+        screenshot_job = _scheduler.get_job('take_screenshot')
+        if ship_job:
+            next_run = ship_job.next_run_time
+            print(f"[{datetime.now()}] Next scheduled ship update: {next_run}")
+        if screenshot_job:
+            next_run = screenshot_job.next_run_time
+            print(f"[{datetime.now()}] Next scheduled screenshot: {next_run}")
         
         # Register shutdown handler
         atexit.register(lambda: _scheduler.shutdown() if _scheduler else None)
@@ -90,5 +106,15 @@ def start_scheduler():
     # Run initial update
     print(f"[{datetime.now()}] Running initial update...")
     update_ship_location()
+    
+    # Take initial screenshot after a short delay to allow app to be ready
+    import threading
+    import time
+    def delayed_initial_screenshot():
+        time.sleep(5)  # Wait 5 seconds for the app to be fully ready
+        print(f"[{datetime.now()}] Taking initial screenshot...")
+        take_screenshot()
+    
+    threading.Thread(target=delayed_initial_screenshot, daemon=True).start()
     
     return _scheduler

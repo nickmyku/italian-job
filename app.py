@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from scraper import scrape_ship_location
 from scheduler import start_scheduler
+from screenshot import SCREENSHOTS_DIR, ensure_screenshots_dir
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
@@ -140,8 +141,59 @@ def manual_update():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@app.route('/api/screenshots')
+def list_screenshots():
+    """List all available screenshots"""
+    ensure_screenshots_dir()
+    
+    screenshots = []
+    if os.path.exists(SCREENSHOTS_DIR):
+        for filename in sorted(os.listdir(SCREENSHOTS_DIR), reverse=True):
+            if filename.endswith('.png'):
+                filepath = os.path.join(SCREENSHOTS_DIR, filename)
+                stat = os.stat(filepath)
+                screenshots.append({
+                    'filename': filename,
+                    'url': f'/api/screenshots/{filename}',
+                    'timestamp': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    'size': stat.st_size
+                })
+    
+    return jsonify({'screenshots': screenshots})
+
+@app.route('/api/screenshots/<filename>')
+def get_screenshot(filename):
+    """Serve a specific screenshot"""
+    ensure_screenshots_dir()
+    
+    # Security: ensure filename doesn't contain path traversal
+    if '../' in filename or filename not in os.listdir(SCREENSHOTS_DIR):
+        return jsonify({'error': 'Screenshot not found'}), 404
+    
+    return send_from_directory(SCREENSHOTS_DIR, filename)
+
+@app.route('/api/screenshots/latest')
+def get_latest_screenshot():
+    """Get the latest screenshot"""
+    ensure_screenshots_dir()
+    
+    if not os.path.exists(SCREENSHOTS_DIR):
+        return jsonify({'error': 'No screenshots available'}), 404
+    
+    screenshots = [f for f in os.listdir(SCREENSHOTS_DIR) if f.endswith('.png')]
+    if not screenshots:
+        return jsonify({'error': 'No screenshots available'}), 404
+    
+    # Sort by filename (which includes timestamp) to get latest
+    latest = sorted(screenshots, reverse=True)[0]
+    
+    return send_from_directory(SCREENSHOTS_DIR, latest)
+
 if __name__ == '__main__':
     init_db()
+    
+    # Ensure screenshots directory exists
+    ensure_screenshots_dir()
     
     # Start scheduler - singleton pattern in scheduler.py prevents multiple instances
     # Disable reloader to prevent scheduler from being killed on code changes
