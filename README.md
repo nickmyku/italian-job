@@ -41,9 +41,13 @@ This application tracks the location and destination of the cargo ship "Sagittar
 ├── app.py                    # Flask application (main entry point)
 ├── scraper.py                # Web scraping logic for shipnext.com
 ├── scheduler.py              # Background scheduler for automatic updates
+├── screenshot.py             # Screenshot capture functionality using Selenium
 ├── requirements.txt          # Python dependencies
 ├── test_destination.py      # Test suite for scraper and database
 ├── ship_locations.db         # SQLite database (created at runtime)
+├── screenshots/              # Screenshot output directory (created at runtime)
+│   └── latest/              # Latest screenshot subdirectory
+│       └── location.bmp     # Latest screenshot (800x480 BMP format)
 ├── static/
 │   ├── index.html           # Main HTML page
 │   ├── app.js               # Frontend JavaScript (map, API calls)
@@ -62,6 +66,10 @@ Main Flask application that:
   - `GET /api/location` - Returns latest ship location
   - `GET /api/history` - Returns last 30 location entries
   - `POST /api/update` - Manually triggers location update
+  - `GET /api/screenshots` - Lists available screenshots
+  - `GET /api/screenshots/<filename>` - Serves a specific screenshot
+  - `GET /api/screenshots/latest` - Returns the latest screenshot (BMP)
+  - `GET /screenshots/latest/location.bmp` - Direct URL to latest screenshot (BMP)
 - Starts background scheduler on application startup
 - Runs on `0.0.0.0:3000` (accessible on all network interfaces)
 
@@ -94,11 +102,70 @@ Background task scheduler using APScheduler:
 - **Schedule**: Updates every 6 hours (interval-based)
 - **Initial Update**: Runs immediately when scheduler starts
 - **Singleton Pattern**: Prevents multiple scheduler instances
-- **Function**: `update_ship_location()` - Calls scraper and saves to database
+- **Functions**:
+  - `update_ship_location()` - Calls scraper and saves to database
+  - Schedules `take_screenshot()` from screenshot.py to run every hour
 - **Thread Safety**: Uses ThreadPoolExecutor with non-daemon threads
 - **Shutdown**: Registered with `atexit` for graceful shutdown
+- **Screenshot Integration**: Automatically takes initial screenshot 5 seconds after startup, then hourly
 
 **Important**: Scheduler runs in background thread, separate from Flask's main thread.
+
+### screenshot.py
+Screenshot capture module using Selenium WebDriver:
+- **Purpose**: Captures visual screenshots of the web application displaying ship location data
+- **Technology**: Selenium WebDriver with Chrome headless browser
+- **Configuration**:
+  - **Target URL**: `http://localhost:3000` (configured via `APP_URL` constant)
+  - **Window Size**: 1280x720 pixels (capture resolution)
+  - **Output Size**: 800x480 pixels (final BMP resolution)
+  - **Output Format**: BMP (Bitmap)
+  - **Output Location**: `screenshots/latest/location.bmp`
+  - **Storage Strategy**: Only latest screenshot is kept (old screenshots are automatically deleted)
+
+**Key Functions**:
+1. **`ensure_screenshots_dir()`**:
+   - Creates `screenshots/` directory if it doesn't exist
+   - Creates `screenshots/latest/` subdirectory if needed
+   - Returns: None (void function)
+
+2. **`cleanup_old_screenshots()`**:
+   - Deletes all old `.bmp` files in the `screenshots/` directory
+   - Preserves the `latest/` subdirectory and its contents
+   - Prevents disk space accumulation by only keeping the most recent screenshot
+   - Returns: None (void function)
+
+3. **`take_screenshot()`**:
+   - Main screenshot capture function
+   - **Process**:
+     1. Initializes Chrome WebDriver in headless mode
+     2. Navigates to `APP_URL` (http://localhost:3000 by default)
+     3. Waits up to 30 seconds for map element (`#map`) to load
+     4. Additional 3-second wait for map tiles to render
+     5. Calls `cleanup_old_screenshots()` before capture
+     6. Captures screenshot at 1280x720 and saves as temporary PNG
+     7. Resizes image to 800x480 resolution using PIL/Pillow
+     8. Converts PNG to BMP format
+     9. Saves final BMP to `screenshots/latest/location.bmp`
+     10. Removes temporary PNG file
+     11. Closes browser and returns file path
+   - **Error Handling**: Returns `None` on failure, prints error messages to console
+   - **Returns**: `str` path to saved screenshot file (`screenshots/latest/location.bmp`) or `None` on error
+
+**Dependencies**:
+- Selenium WebDriver (Chrome)
+- PIL/Pillow (for image processing)
+- ChromeDriver (auto-managed via webdriver-manager if available)
+
+**Constants**:
+- `SCREENSHOTS_DIR = 'screenshots'` - Output directory name
+- `APP_URL = 'http://localhost:3000'` - Web application URL to capture
+
+**Usage Notes**:
+- Requires Chrome/Chromium browser and ChromeDriver installed
+- App must be running on `localhost:3000` before calling `take_screenshot()`
+- Screenshot capture is CPU and memory intensive; runs in background via scheduler
+- Old screenshots are automatically cleaned up to prevent disk space issues
 
 ### static/app.js
 Frontend JavaScript that:
@@ -139,6 +206,9 @@ CSS styling for the application (not included in file review, but referenced).
 - `lxml==4.9.3` - XML/HTML parser backend
 - `apscheduler==3.10.4` - Background job scheduling
 - `geopy==2.4.1` - Geocoding service (Nominatim)
+- `selenium` - WebDriver for browser automation (screenshot capture)
+- `Pillow` (or `PIL`) - Image processing library for screenshot conversion and resizing
+- `webdriver-manager` (optional) - Automatic ChromeDriver management
 
 ### External Services
 - **shipnext.com** - Source of ship location data
@@ -166,8 +236,10 @@ python app.py
 
 The application will:
 - Initialize the SQLite database (creates `ship_locations.db` if it doesn't exist)
+- Create the screenshots directory structure (`screenshots/latest/`)
 - Start the background scheduler
 - Run an initial location update
+- Take an initial screenshot after 5 seconds (allows app to fully load)
 - Start the Flask server on `http://localhost:3000`
 
 ### Access the Application:
@@ -247,12 +319,100 @@ Manually triggers a location update by scraping shipnext.com.
 }
 ```
 
+### GET /api/screenshots
+Lists all available screenshots. Currently only returns the latest screenshot.
+
+**Response** (200 OK):
+```json
+{
+  "screenshots": [
+    {
+      "filename": "latest/location.bmp",
+      "url": "/screenshots/latest/location.bmp",
+      "timestamp": "2024-01-01T12:00:00",
+      "size": 1152000
+    }
+  ]
+}
+```
+
+### GET /api/screenshots/latest
+Returns the latest screenshot as a BMP image file.
+
+**Response** (200 OK):
+- Content-Type: `image/bmp`
+- Body: Binary BMP image data (800x480 pixels)
+
+**Response** (404 Not Found):
+```json
+{
+  "error": "No screenshots available"
+}
+```
+
+### GET /api/screenshots/<filename>
+Serves a specific screenshot file. Currently only supports `latest/location.bmp`, `latest`, or `location.bmp`.
+
+**Response** (200 OK):
+- Content-Type: `image/bmp`
+- Body: Binary BMP image data
+
+**Response** (404 Not Found):
+```json
+{
+  "error": "Screenshot not found"
+}
+```
+
+### GET /screenshots/latest/location.bmp
+Direct URL endpoint to access the latest screenshot. Provides a simple path for accessing screenshots without API prefix.
+
+**Response** (200 OK):
+- Content-Type: `image/bmp`
+- Body: Binary BMP image data (800x480 pixels)
+
+**Response** (404 Not Found):
+```json
+{
+  "error": "Latest screenshot not available"
+}
+```
+
 ## Configuration
 
 ### Update Schedule
 Modify `scheduler.py` line 70 to change update interval:
 ```python
 hours=6,  # Change to desired hours
+```
+
+### Screenshot Schedule
+Modify `scheduler.py` line 82 to change screenshot capture interval:
+```python
+hours=1,  # Change to desired hours
+```
+
+### Screenshot Output Location
+Modify `screenshot.py` line 11 to change screenshots directory:
+```python
+SCREENSHOTS_DIR = 'screenshots'  # Change to desired directory name
+```
+
+### Screenshot Target URL
+Modify `screenshot.py` line 12 to change the URL to capture:
+```python
+APP_URL = 'http://localhost:3000'  # Change to desired URL
+```
+
+### Screenshot Resolution
+Modify `screenshot.py` line 64 to change capture window size:
+```python
+chrome_options.add_argument('--window-size=1280,720')  # Change width,height
+```
+
+Modify `screenshot.py` line 118 to change output image size:
+```python
+img_resized = img.resize((800, 480), Image.LANCZOS)  # Change width,height tuple
 ```
 
 ### Auto-refresh Interval
@@ -320,6 +480,32 @@ python test_destination.py
 2. Check if database file is locked (close other database connections)
 3. Verify SQLite3 is installed on system
 
+### Screenshot Capture Issues
+1. **ChromeDriver not found**:
+   - Install Chrome/Chromium browser on the system
+   - Install ChromeDriver: `apt-get install chromium-chromedriver` (Linux) or download from ChromeDriver website
+   - Alternatively, install `webdriver-manager` package for automatic driver management
+
+2. **Screenshot directory permissions**:
+   - Ensure write permissions for `screenshots/` directory
+   - Check that application can create subdirectories
+
+3. **Screenshot returns None**:
+   - Verify Flask app is running on `http://localhost:3000` before screenshot capture
+   - Check console logs for detailed error messages
+   - Verify Chrome/Chromium is properly installed
+   - Check available disk space (screenshots require ~1MB per image)
+
+4. **Screenshot quality or size issues**:
+   - Adjust `--window-size` argument in `screenshot.py` for capture resolution
+   - Adjust `resize()` parameters in `screenshot.py` for output resolution
+   - BMP format is required for compatibility; conversion happens automatically
+
+5. **Screenshots not updating**:
+   - Check scheduler is running (look for "Scheduled job 'take_screenshot'" message)
+   - Verify job is executing (check console for screenshot capture messages)
+   - Check if old screenshots are being cleaned up properly
+
 ## Data Extraction Details
 
 The scraper uses multiple fallback strategies to extract location data:
@@ -343,6 +529,48 @@ The scraper handles various coordinate formats:
 - **Database**: SQLite may not be suitable for high-traffic scenarios
 - **Single Ship**: Currently hardcoded for "Sagittarius Leader" only
 
+## Screenshot Functionality Details
+
+### Purpose
+The screenshot functionality captures visual representations of the web application's current state, showing the ship location on an interactive map. This is useful for:
+- Visual monitoring and status checking
+- Integration with external systems that consume image data
+- Creating visual logs of ship location history
+- Displaying on external displays or dashboards
+
+### How It Works
+1. **Scheduled Capture**: The scheduler automatically triggers `take_screenshot()` every hour
+2. **Browser Automation**: Selenium WebDriver launches a headless Chrome browser
+3. **Page Loading**: Navigates to `http://localhost:3000` and waits for map to fully load
+4. **Image Capture**: Takes a screenshot at 1280x720 resolution
+5. **Image Processing**: Converts PNG to BMP format and resizes to 800x480
+6. **Storage**: Saves to `screenshots/latest/location.bmp` (overwrites previous)
+7. **Cleanup**: Deletes old screenshot files to conserve disk space
+
+### File Structure
+- **Input**: Web application running at `APP_URL` (default: `http://localhost:3000`)
+- **Output**: `screenshots/latest/location.bmp` (single file, always latest)
+- **Temporary Files**: `screenshots/temp_screenshot.png` (created and deleted during capture)
+
+### API Access
+Screenshots can be accessed via:
+- **JSON API**: `GET /api/screenshots` - Returns metadata about available screenshots
+- **Direct Access**: `GET /screenshots/latest/location.bmp` - Returns BMP image file
+- **API Endpoint**: `GET /api/screenshots/latest` - Returns BMP image file
+
+### Integration Points
+- **Scheduler**: `scheduler.py` imports and schedules `take_screenshot()` function
+- **Flask App**: `app.py` serves screenshot files via REST API endpoints
+- **Directory Management**: `app.py` ensures screenshot directory exists on startup
+
+### Technical Specifications
+- **Format**: BMP (Bitmap)
+- **Resolution**: 800x480 pixels
+- **Capture Resolution**: 1280x720 pixels (before resize)
+- **File Size**: Approximately 1.15 MB per screenshot
+- **Browser**: Chrome/Chromium headless mode
+- **Wait Time**: Up to 30 seconds for page load, plus 3 seconds for map tiles
+
 ## Future Enhancements
 
 Potential improvements:
@@ -354,6 +582,9 @@ Potential improvements:
 - Export functionality for location data
 - Docker containerization
 - Environment-based configuration
+- Screenshot format options (PNG, JPEG) in addition to BMP
+- Screenshot history with timestamped files
+- Screenshot capture on demand via API endpoint
 
 ## License
 
