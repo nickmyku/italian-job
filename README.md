@@ -22,7 +22,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 
 ### Frontend
 - **Map Library**: Leaflet.js 1.9.4
-- **Map Tiles**: Stamen Toner Lite (minimalist black and white style)
+- **Map Tiles**: CartoDB Positron (minimalist light style, similar to Toner Lite)
 - **Auto-refresh**: Frontend polls API every 5 minutes
 - **UI**: Single-page application with info panel, map, and history sidebar
 
@@ -169,7 +169,7 @@ Screenshot capture module using Selenium WebDriver:
 
 ### static/app.js
 Frontend JavaScript that:
-- Initializes Leaflet map on page load with Stamen Toner Lite tiles
+- Initializes Leaflet map on page load with CartoDB Positron tiles (minimalist light style)
 - Fetches location data from `/api/location`
 - Displays ship marker with custom SVG icon
 - Updates info panel with location details
@@ -212,8 +212,8 @@ CSS styling for the application (not included in file review, but referenced).
 
 ### External Services
 - **shipnext.com** - Source of ship location data
-- **Stamen Design** - Map tile provider (Toner Lite style via Leaflet)
-- **OpenStreetMap** - Map data source (used by Stamen tiles)
+- **CARTO** - Map tile provider (Positron light style via Leaflet)
+- **OpenStreetMap** - Map data source (used by CARTO tiles)
 - **Nominatim Geocoding** - Converts location names to coordinates (via Geopy)
 
 ## Installation
@@ -470,6 +470,8 @@ python test_destination.py
 2. Verify Leaflet.js is loading (check Network tab)
 3. Ensure API is returning valid coordinate data
 4. Check if coordinates are within valid ranges (-90 to 90 for lat, -180 to 180 for lon)
+5. Verify CartoDB tile service is accessible (check Network tab for tile requests)
+6. If map appears grey, check browser console for CORS or tile loading errors
 
 ### Geocoding Failures
 1. Nominatim has rate limits - errors are normal and handled gracefully
