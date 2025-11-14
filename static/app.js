@@ -93,7 +93,7 @@ function updateMap(locationData) {
     shipMarker = L.marker([lat, lon], { icon: shipIcon }).addTo(map);
     
     // Center map on ship
-    map.setView([lat, lon], 6);
+    map.setView([lat, lon], 5);
     
     // Update info panel
     updateInfoPanel(locationData);
