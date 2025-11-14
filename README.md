@@ -22,7 +22,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 
 ### Frontend
 - **Map Library**: Leaflet.js 1.9.4
-- **Map Tiles**: OpenStreetMap
+- **Map Tiles**: Stamen Toner Lite (minimalist black and white style)
 - **Auto-refresh**: Frontend polls API every 5 minutes
 - **UI**: Single-page application with info panel, map, and history sidebar
 
@@ -169,7 +169,7 @@ Screenshot capture module using Selenium WebDriver:
 
 ### static/app.js
 Frontend JavaScript that:
-- Initializes Leaflet map on page load
+- Initializes Leaflet map on page load with Stamen Toner Lite tiles
 - Fetches location data from `/api/location`
 - Displays ship marker with custom SVG icon
 - Updates info panel with location details
@@ -212,7 +212,8 @@ CSS styling for the application (not included in file review, but referenced).
 
 ### External Services
 - **shipnext.com** - Source of ship location data
-- **OpenStreetMap** - Map tile provider (via Leaflet)
+- **Stamen Design** - Map tile provider (Toner Lite style via Leaflet)
+- **OpenStreetMap** - Map data source (used by Stamen tiles)
 - **Nominatim Geocoding** - Converts location names to coordinates (via Geopy)
 
 ## Installation
