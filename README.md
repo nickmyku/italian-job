@@ -170,17 +170,22 @@ CSS styling for the application (not included in file review, but referenced).
 
 ## Installation
 
-1. **Install Python dependencies**:
+1. **Install Linux packages**:
+```bash
+sudo apt-get install libxml2-dev libxslt-dev
+```
+
+2. **Install Python dependencies**:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. **Install Playwright browsers** (required for screenshot functionality):
+3. **Install Playwright browsers** (required for screenshot functionality):
 ```bash
 playwright install chromium
 ```
 
-3. **Verify installation**:
+4. **Verify installation**:
 ```bash
 python test_destination.py
 ```
