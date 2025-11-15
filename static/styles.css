@@ -136,54 +136,6 @@ header h1 {
     z-index: 1;
 }
 
-.screenshot-panel {
-    padding: 25px 30px;
-    background: #ffffff;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.screenshot-panel h2 {
-    margin-bottom: 15px;
-    color: #333;
-    font-size: 1.5em;
-}
-
-.screenshot-info {
-    margin-bottom: 15px;
-    color: #6c757d;
-    font-size: 0.95em;
-}
-
-.screenshot-container {
-    position: relative;
-    width: 100%;
-    background: #f8f9fa;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.screenshot-container img {
-    width: 100%;
-    height: auto;
-    display: block;
-    border-radius: 8px;
-}
-
-.screenshot-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 300px;
-    background: #f8f9fa;
-    color: #6c757d;
-    font-size: 1.2em;
-}
-
-.screenshot-placeholder p {
-    text-align: center;
-}
-
 .history-panel {
     padding: 25px 30px;
     background: #f8f9fa;

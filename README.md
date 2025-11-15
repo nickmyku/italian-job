@@ -1,6 +1,6 @@
 # Ship Tracker - Sagittarius Leader
 
-A web application that scrapes shipnext.com for the destination and location information of the ship "Sagittarius Leader" and displays it on an interactive map with automatic scheduled updates. The application also captures hourly screenshots of itself for monitoring purposes.
+A web application that scrapes shipnext.com for the destination and location information of the ship "Sagittarius Leader" and displays it on an interactive map with automatic scheduled updates. The application also captures hourly screenshots of itself, accessible at `/screenshots/current.png`.
 
 ## Project Overview
 
@@ -10,7 +10,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 - Displaying current location on an interactive map using Leaflet.js
 - Providing REST API endpoints for programmatic access
 - Automatically updating location data every 6 hours via scheduled background tasks
-- **NEW**: Taking hourly screenshots of the application for monitoring and displaying them in the web interface
+- **NEW**: Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/current.png`
 
 ## Architecture
 
@@ -51,7 +51,8 @@ This application tracks the location and destination of the cargo ship "Sagittar
 │   ├── index.html           # Main HTML page
 │   ├── app.js               # Frontend JavaScript (map, API calls)
 │   ├── styles.css           # CSS styling
-│   └── screenshot.png       # Latest application screenshot (created at runtime)
+│   └── screenshots/
+│       └── current.png      # Latest application screenshot (created at runtime)
 └── README.md                # This file
 ```
 
@@ -66,7 +67,7 @@ Main Flask application that:
   - `GET /api/location` - Returns latest ship location
   - `GET /api/history` - Returns last 30 location entries
   - `POST /api/update` - Manually triggers location update
-  - `GET /api/screenshot` - Returns screenshot metadata and path
+  - `GET /screenshots/current.png` - Serves the latest application screenshot
 - Starts background scheduler on application startup
 - Runs on `0.0.0.0:3000` (accessible on all network interfaces)
 
@@ -113,7 +114,8 @@ Background task scheduler using APScheduler:
 Screenshot capture utility using Playwright:
 - **Browser**: Chromium (headless mode)
 - **Viewport**: 1920x1080
-- **Output**: Saves to `static/screenshot.png` (replaces previous screenshot)
+- **Output**: Saves to `static/screenshots/current.png` (replaces previous screenshot)
+- **URL**: Screenshot accessible at `/screenshots/current.png`
 - **Functions**:
   - `take_screenshot(url)` - Captures full-page screenshot of the application
   - `get_screenshot_path()` - Returns path to current screenshot
@@ -127,9 +129,7 @@ Frontend JavaScript that:
 - Updates info panel with location details
 - Handles manual updates via button click
 - Fetches and displays location history (clickable to view past locations)
-- **NEW**: Fetches and displays the latest application screenshot
 - Auto-refreshes location data every 5 minutes
-- Auto-refreshes screenshot every 2 minutes
 - Shows status messages for user feedback
 
 **Key Functions**:
@@ -138,13 +138,11 @@ Frontend JavaScript that:
 - `fetchLocation()` - GET request to `/api/location`
 - `manualUpdate()` - POST request to `/api/update`
 - `fetchHistory()` - GET request to `/api/history`
-- `fetchScreenshot()` - GET request to `/api/screenshot` and updates screenshot display
 
 ### static/index.html
 HTML structure with:
 - Info panel showing: Last Updated, Destination, Speed, Heading, Coordinates
 - Map container (`<div id="map">`)
-- **NEW**: Screenshot panel displaying the latest hourly screenshot with timestamp
 - History panel with clickable location entries
 - Control buttons: "Get Current Location" and "Center Map"
 - Status message area
@@ -204,6 +202,7 @@ The application will:
 ### Access the Application:
 - Web interface: `http://localhost:3000`
 - API endpoint: `http://localhost:3000/api/location`
+- Screenshot: `http://localhost:3000/screenshots/current.png`
 
 **Note**: The Flask server runs with `debug=True` and `use_reloader=False` (reloader disabled to prevent scheduler conflicts).
 
@@ -278,26 +277,15 @@ Manually triggers a location update by scraping shipnext.com.
 }
 ```
 
-### GET /api/screenshot
-Returns metadata about the latest application screenshot.
+### GET /screenshots/current.png
+Serves the latest application screenshot as a PNG image file.
 
 **Response** (200 OK):
-```json
-{
-  "success": true,
-  "path": "/static/screenshot.png",
-  "timestamp": 1704110400.123,
-  "last_updated": "2024-01-01T12:00:00"
-}
-```
+- Returns PNG image file
+- Headers include no-cache directives to ensure latest screenshot is served
 
 **Response** (404 Not Found):
-```json
-{
-  "success": false,
-  "message": "No screenshot available yet"
-}
-```
+- File not found if screenshot hasn't been captured yet
 
 ## Configuration
 
@@ -313,14 +301,10 @@ hours=1,  # Change to desired hours for screenshot capture
 ```
 
 ### Auto-refresh Interval
-Modify `static/app.js` to change frontend refresh intervals:
-- Location data (around line 263):
+Modify `static/app.js` to change frontend refresh interval:
+- Location data (around line 228):
 ```javascript
 setInterval(fetchLocation, 5 * 60 * 1000);  // Change milliseconds
-```
-- Screenshot display (around line 266):
-```javascript
-setInterval(fetchScreenshot, 2 * 60 * 1000);  // Change milliseconds
 ```
 
 ### Port and Host
@@ -355,13 +339,13 @@ python test_destination.py
 
 ## Troubleshooting
 
-### Screenshot Not Displaying
+### Screenshot Not Accessible
 1. Verify Playwright browsers are installed: Run `playwright install chromium`
-2. Check if screenshot file exists: Look for `static/screenshot.png`
+2. Check if screenshot file exists: Look for `static/screenshots/current.png`
 3. Check console for screenshot capture errors
 4. Ensure the Flask server is accessible at `http://localhost:3000`
 5. Wait at least 5 seconds after server start for initial screenshot
-6. Check browser console for screenshot API errors
+6. Try accessing directly: `http://localhost:3000/screenshots/current.png`
 
 ### No Location Data Displayed
 1. Check if scraper is fetching data: Look for debug messages in console

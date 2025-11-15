@@ -2,15 +2,18 @@ from playwright.sync_api import sync_playwright
 import os
 from datetime import datetime
 
-SCREENSHOT_PATH = 'static/screenshot.png'
+SCREENSHOT_PATH = 'static/screenshots/current.png'
 
 def take_screenshot(url='http://localhost:3000'):
     """
-    Take a screenshot of the application and save it to static folder
+    Take a screenshot of the application and save it to static/screenshots folder
     Replaces the previous screenshot
     """
     try:
         print(f"[{datetime.now()}] Taking screenshot of application at {url}...")
+        
+        # Ensure screenshots directory exists
+        os.makedirs(os.path.dirname(SCREENSHOT_PATH), exist_ok=True)
         
         with sync_playwright() as p:
             # Launch browser in headless mode
@@ -32,6 +35,7 @@ def take_screenshot(url='http://localhost:3000'):
             browser.close()
             
         print(f"[{datetime.now()}] Screenshot saved successfully to {SCREENSHOT_PATH}")
+        print(f"[{datetime.now()}] Screenshot accessible at: /screenshots/current.png")
         return True
         
     except Exception as e:

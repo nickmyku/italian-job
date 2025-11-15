@@ -1,7 +1,7 @@
 # Screenshot Feature Implementation
 
 ## Overview
-Added automatic screenshot capture functionality to the Ship Tracker application. The system now takes a screenshot of the web application every hour and displays it in the web interface.
+Added automatic screenshot capture functionality to the Ship Tracker application. The system now takes a screenshot of the web application every hour and makes it accessible at `/screenshots/current.png`.
 
 ## Changes Made
 
@@ -9,7 +9,7 @@ Added automatic screenshot capture functionality to the Ship Tracker application
 - Utilizes Playwright to capture screenshots in headless Chromium browser
 - Viewport size: 1920x1080
 - Captures full-page screenshots
-- Saves to `static/screenshot.png` (replaces previous screenshot)
+- Saves to `static/screenshots/current.png` (replaces previous screenshot)
 - Functions:
   - `take_screenshot(url)` - Captures screenshot
   - `get_screenshot_path()` - Returns screenshot file path
@@ -22,30 +22,18 @@ Added automatic screenshot capture functionality to the Ship Tracker application
 - Integrated with existing APScheduler background jobs
 
 ### 3. Updated: `app.py`
-- Added new API endpoint: `GET /api/screenshot`
-- Returns screenshot metadata (path, timestamp)
-- Imports screenshot utility functions
+- Added new route: `GET /screenshots/<filename>`
+- Serves screenshot files directly from `static/screenshots/` folder
+- No-cache headers to ensure latest screenshot is always served
 
-### 4. Updated: `static/index.html`
-- Added screenshot panel section
-- Displays screenshot image with timestamp
-- Placeholder shown when screenshot not available
+### 4. Created: `static/screenshots/` directory
+- Houses all screenshot files
+- `current.png` is the latest screenshot
 
-### 5. Updated: `static/styles.css`
-- Styled screenshot panel with modern look
-- Responsive screenshot container
-- Placeholder styling for loading/error states
-
-### 6. Updated: `static/app.js`
-- Added `fetchScreenshot()` function
-- Auto-refreshes screenshot every 2 minutes
-- Handles screenshot loading and error states
-- Cache-busting to ensure latest screenshot is shown
-
-### 7. Updated: `requirements.txt`
+### 5. Updated: `requirements.txt`
 - Added `playwright==1.40.0` dependency
 
-### 8. Updated: `README.md`
+### 6. Updated: `README.md`
 - Documented new screenshot feature
 - Added installation instructions for Playwright browsers
 - Updated API documentation
@@ -55,9 +43,9 @@ Added automatic screenshot capture functionality to the Ship Tracker application
 
 1. **Scheduler**: Every hour, the background scheduler calls `update_screenshot()`
 2. **Screenshot Capture**: Playwright launches a headless Chromium browser, navigates to `http://localhost:3000`, waits for page load, and captures a full-page screenshot
-3. **Storage**: Screenshot is saved to `static/screenshot.png` (replaces previous one)
-4. **Web Display**: Frontend fetches screenshot metadata via `/api/screenshot` endpoint and displays the image
-5. **Auto-Refresh**: Screenshot display refreshes every 2 minutes to show new captures
+3. **Storage**: Screenshot is saved to `static/screenshots/current.png` (replaces previous one)
+4. **Direct Access**: Screenshot is accessible directly at `/screenshots/current.png` via Flask's custom route
+5. **No Cache**: Response headers ensure browsers always fetch the latest screenshot
 
 ## Installation Requirements
 
@@ -79,11 +67,13 @@ Edit `scheduler.py` around line 90:
 hours=1,  # Change to desired hours
 ```
 
-### Change Display Refresh Rate
-Edit `static/app.js` around line 266:
-```javascript
-setInterval(fetchScreenshot, 2 * 60 * 1000);  // Change milliseconds
+### Access the Screenshot
+The screenshot is available directly at:
 ```
+http://localhost:3000/screenshots/current.png
+```
+
+You can view it in a browser, embed it in other pages, or fetch it programmatically.
 
 ### Change Screenshot Resolution
 Edit `screenshot_util.py` line 22:
@@ -91,35 +81,49 @@ Edit `screenshot_util.py` line 22:
 page = browser.new_page(viewport={'width': 1920, 'height': 1080})
 ```
 
-## API Endpoint
+## Screenshot Endpoint
 
-### GET /api/screenshot
+### GET /screenshots/current.png
 
 **Success Response (200)**:
-```json
-{
-  "success": true,
-  "path": "/static/screenshot.png",
-  "timestamp": 1704110400.123,
-  "last_updated": "2024-01-01T12:00:00"
-}
-```
+- Returns PNG image file
+- Content-Type: `image/png`
+- Cache-Control: `no-cache, no-store, must-revalidate`
 
 **Error Response (404)**:
-```json
-{
-  "success": false,
-  "message": "No screenshot available yet"
-}
+- File not found if screenshot hasn't been captured yet
+
+### Usage Examples
+
+**In HTML:**
+```html
+<img src="/screenshots/current.png" alt="Application Screenshot">
+```
+
+**Direct Browser Access:**
+```
+http://localhost:3000/screenshots/current.png
+```
+
+**In JavaScript:**
+```javascript
+fetch('/screenshots/current.png')
+  .then(response => response.blob())
+  .then(blob => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(blob);
+    document.body.appendChild(img);
+  });
 ```
 
 ## Troubleshooting
 
-### Screenshot Not Appearing
+### Screenshot Not Accessible
 1. Wait at least 5 seconds after starting the server
 2. Check if Playwright browsers are installed
-3. Verify `static/screenshot.png` exists
-4. Check console logs for errors
+3. Verify `static/screenshots/current.png` exists
+4. Try accessing directly: `http://localhost:3000/screenshots/current.png`
+5. Check console logs for errors
 
 ### Playwright Installation Issues
 If `playwright install chromium` fails:
@@ -130,9 +134,10 @@ If `playwright install chromium` fails:
 ## Benefits
 
 1. **Monitoring**: Visual verification that the application is running correctly
-2. **Debugging**: Historical view of UI state
+2. **Direct Access**: Screenshot available as a simple file URL, no API calls needed
 3. **Automation**: Fully automated, no manual intervention needed
 4. **Minimal Storage**: Only one screenshot stored at a time
+5. **Easy Integration**: Can be embedded in external dashboards, monitoring tools, or documentation
 
 ## Future Enhancements
 
