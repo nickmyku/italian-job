@@ -112,10 +112,45 @@ def take_screenshot():
         temp_png_path = os.path.join(SCREENSHOTS_DIR, 'temp_screenshot.png')
         driver.save_screenshot(temp_png_path)
         
-        # Convert PNG to BMP and resize to 800x480 resolution
+        # Convert PNG to BMP and resize to 800x480 resolution (preserving aspect ratio)
         print(f"[{datetime.now()}] Converting to BMP format and resizing to 800x480...")
         img = Image.open(temp_png_path)
-        img_resized = img.resize((800, 480), Image.LANCZOS)
+        
+        # Convert to RGB if necessary (BMP doesn't support transparency)
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # Calculate resize dimensions while preserving aspect ratio
+        original_width, original_height = img.size
+        print(f"[{datetime.now()}] Original screenshot dimensions: {original_width}x{original_height} (aspect ratio: {original_width/original_height:.3f})")
+        target_width, target_height = 800, 480
+        target_aspect = target_width / target_height
+        original_aspect = original_width / original_height
+        
+        # If aspect ratios match, resize directly; otherwise fit within bounds
+        if abs(original_aspect - target_aspect) < 0.01:  # Close enough (within 1%)
+            img_resized = img.resize((target_width, target_height), Image.LANCZOS)
+        else:
+            # Preserve aspect ratio by fitting within target dimensions
+            if original_aspect > target_aspect:
+                # Image is wider - fit to width
+                new_width = target_width
+                new_height = int(target_width / original_aspect)
+            else:
+                # Image is taller - fit to height
+                new_height = target_height
+                new_width = int(target_height * original_aspect)
+            
+            img_resized = img.resize((new_width, new_height), Image.LANCZOS)
+            
+            # If we need exact 800x480, create a new image with black bars (letterboxing)
+            if new_width != target_width or new_height != target_height:
+                final_img = Image.new('RGB', (target_width, target_height), (0, 0, 0))
+                # Center the resized image
+                x_offset = (target_width - new_width) // 2
+                y_offset = (target_height - new_height) // 2
+                final_img.paste(img_resized, (x_offset, y_offset))
+                img_resized = final_img
         
         # Save only to latest/location.bmp (no timestamped version to save memory)
         latest_dir = os.path.join(SCREENSHOTS_DIR, 'latest')
