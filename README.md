@@ -117,7 +117,7 @@ Screenshot capture module using Selenium WebDriver:
 - **Technology**: Selenium WebDriver with Chrome headless browser
 - **Configuration**:
   - **Target URL**: `http://localhost:3000` (configured via `APP_URL` constant)
-  - **Window Size**: 1280x768 pixels (capture resolution)
+  - **Window Size**: 1600x960 pixels (capture resolution)
   - **Output Size**: 800x480 pixels (final BMP resolution)
   - **Output Format**: BMP (Bitmap)
   - **Output Location**: `screenshots/latest/location.bmp`
@@ -143,7 +143,7 @@ Screenshot capture module using Selenium WebDriver:
      3. Waits up to 30 seconds for map element (`#map`) to load
      4. Additional 3-second wait for map tiles to render
      5. Calls `cleanup_old_screenshots()` before capture
-     6. Captures screenshot at 1280x768 and saves as temporary PNG
+     6. Captures screenshot at 1600x960 and saves as temporary PNG
      7. Resizes image to 800x480 resolution using PIL/Pillow
      8. Converts PNG to BMP format
      9. Saves final BMP to `screenshots/latest/location.bmp`
@@ -408,7 +408,7 @@ APP_URL = 'http://localhost:3000'  # Change to desired URL
 ### Screenshot Resolution
 Modify `screenshot.py` line 64 to change capture window size:
 ```python
-chrome_options.add_argument('--window-size=1280,768')  # Change width,height
+chrome_options.add_argument('--window-size=1600,960')  # Change width,height
 ```
 
 Modify `screenshot.py` line 118 to change output image size:
@@ -545,7 +545,7 @@ The screenshot functionality captures visual representations of the web applicat
 1. **Scheduled Capture**: The scheduler automatically triggers `take_screenshot()` every hour
 2. **Browser Automation**: Selenium WebDriver launches a headless Chrome browser
 3. **Page Loading**: Navigates to `http://localhost:3000` and waits for map to fully load
-4. **Image Capture**: Takes a screenshot at 1280x768 resolution
+4. **Image Capture**: Takes a screenshot at 1600x960 resolution
 5. **Image Processing**: Converts PNG to BMP format and resizes to 800x480
 6. **Storage**: Saves to `screenshots/latest/location.bmp` (overwrites previous)
 7. **Cleanup**: Deletes old screenshot files to conserve disk space
@@ -569,7 +569,7 @@ Screenshots can be accessed via:
 ### Technical Specifications
 - **Format**: BMP (Bitmap)
 - **Resolution**: 800x480 pixels
-- **Capture Resolution**: 1280x768 pixels (before resize)
+- **Capture Resolution**: 1600x960 pixels (before resize)
 - **File Size**: Approximately 1.15 MB per screenshot
 - **Browser**: Chrome/Chromium headless mode
 - **Wait Time**: Up to 30 seconds for page load, plus 3 seconds for map tiles
