@@ -61,7 +61,7 @@ def take_screenshot():
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
-        chrome_options.add_argument('--window-size=1280,720')
+        chrome_options.add_argument('--window-size=1280,768')
         chrome_options.add_argument('--disable-extensions')
         chrome_options.add_argument('--disable-software-rasterizer')
         
@@ -107,15 +107,15 @@ def take_screenshot():
         # Clean up old screenshots before taking a new one
         cleanup_old_screenshots()
         
-        # Take screenshot at 1280x720 (save as PNG first, then convert to BMP)
-        print(f"[{datetime.now()}] Capturing screenshot at 1280x720...")
+        # Take screenshot at 1280x768 (save as PNG first, then convert to BMP)
+        print(f"[{datetime.now()}] Capturing screenshot at 1280x768...")
         temp_png_path = os.path.join(SCREENSHOTS_DIR, 'temp_screenshot.png')
         driver.save_screenshot(temp_png_path)
         
-        # Convert PNG to BMP and resize to 800x480 resolution
-        print(f"[{datetime.now()}] Converting to BMP format and resizing to 800x480...")
+        # Convert PNG to BMP and resize to 1280x768 resolution
+        print(f"[{datetime.now()}] Converting to BMP format and resizing to 1280x768...")
         img = Image.open(temp_png_path)
-        img_resized = img.resize((800, 480), Image.LANCZOS)
+        img_resized = img.resize((1280, 768), Image.LANCZOS)
         
         # Save only to latest/location.bmp (no timestamped version to save memory)
         latest_dir = os.path.join(SCREENSHOTS_DIR, 'latest')
