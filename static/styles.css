@@ -44,7 +44,7 @@ header h1 {
     display: flex;
     gap: 15px;
     align-items: center;
-    background: #f8f9fa;
+    background: #fff;
     border-top: 1px solid #e9ecef;
 }
 
@@ -106,7 +106,7 @@ header h1 {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 20px;
     padding: 25px 30px;
-    background: #f8f9fa;
+    background: #fff;
     border-bottom: 1px solid #e9ecef;
 }
 
@@ -138,7 +138,7 @@ header h1 {
 
 .history-panel {
     padding: 25px 30px;
-    background: #f8f9fa;
+    background: #fff;
 }
 
 .history-panel h2 {
