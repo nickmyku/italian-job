@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from scraper import scrape_ship_location
 from scheduler import start_scheduler
+from screenshot_util import get_screenshot_path, get_screenshot_timestamp
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
@@ -139,6 +140,25 @@ def manual_update():
             return jsonify({'success': False, 'message': 'Failed to scrape location'}), 500
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/screenshot')
+def get_screenshot():
+    """Get the latest screenshot information"""
+    screenshot_path = get_screenshot_path()
+    screenshot_timestamp = get_screenshot_timestamp()
+    
+    if screenshot_path and os.path.exists(screenshot_path):
+        return jsonify({
+            'success': True,
+            'path': '/static/screenshot.png',
+            'timestamp': screenshot_timestamp,
+            'last_updated': datetime.fromtimestamp(screenshot_timestamp).isoformat()
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'message': 'No screenshot available yet'
+        }), 404
 
 if __name__ == '__main__':
     init_db()

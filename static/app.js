@@ -200,6 +200,40 @@ async function fetchHistory() {
     }
 }
 
+// Fetch and display screenshot
+async function fetchScreenshot() {
+    try {
+        const response = await fetch('/api/screenshot');
+        const data = await response.json();
+        
+        const screenshotImage = document.getElementById('screenshotImage');
+        const screenshotPlaceholder = document.getElementById('screenshotPlaceholder');
+        const screenshotTimestamp = document.getElementById('screenshotTimestamp');
+        
+        if (data.success) {
+            // Add cache buster to force reload of image
+            const cacheBuster = '?t=' + Date.now();
+            screenshotImage.src = data.path + cacheBuster;
+            screenshotImage.style.display = 'block';
+            screenshotPlaceholder.style.display = 'none';
+            
+            // Update timestamp
+            const date = new Date(data.last_updated);
+            screenshotTimestamp.textContent = `Last updated: ${date.toLocaleString()}`;
+        } else {
+            screenshotImage.style.display = 'none';
+            screenshotPlaceholder.style.display = 'flex';
+            screenshotPlaceholder.innerHTML = '<p>📸 No screenshot available yet<br><small>Screenshot will be available after the first hourly capture</small></p>';
+            screenshotTimestamp.textContent = 'Waiting for first screenshot...';
+        }
+    } catch (error) {
+        console.error('Error fetching screenshot:', error);
+        const screenshotPlaceholder = document.getElementById('screenshotPlaceholder');
+        screenshotPlaceholder.style.display = 'flex';
+        screenshotPlaceholder.innerHTML = '<p>❌ Error loading screenshot</p>';
+    }
+}
+
 // Show status message
 function showStatus(message, type) {
     const statusEl = document.getElementById('status');
@@ -219,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMap();
     fetchLocation();
     fetchHistory();
+    fetchScreenshot();
     
     // Set up event listeners
     document.getElementById('updateBtn').addEventListener('click', manualUpdate);
@@ -226,4 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Auto-refresh every 5 minutes
     setInterval(fetchLocation, 5 * 60 * 1000);
+    
+    // Auto-refresh screenshot every 2 minutes (to show new screenshots shortly after they're taken)
+    setInterval(fetchScreenshot, 2 * 60 * 1000);
 });

@@ -2,6 +2,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 from datetime import datetime
 from scraper import scrape_ship_location
+from screenshot_util import take_screenshot
 import sqlite3
 import atexit
 
@@ -44,6 +45,18 @@ def update_ship_location():
     except Exception as e:
         print(f"[{datetime.now()}] Error updating location: {e}")
 
+def update_screenshot():
+    """Take a screenshot of the application every hour"""
+    print(f"[{datetime.now()}] Taking screenshot...")
+    try:
+        success = take_screenshot()
+        if success:
+            print(f"[{datetime.now()}] Screenshot updated successfully")
+        else:
+            print(f"[{datetime.now()}] Failed to take screenshot")
+    except Exception as e:
+        print(f"[{datetime.now()}] Error taking screenshot: {e}")
+
 def start_scheduler():
     """Start the background scheduler for updates every 6 hours"""
     global _scheduler
@@ -73,6 +86,17 @@ def start_scheduler():
         )
         print(f"[{datetime.now()}] Scheduled job 'ship_update' to run every 6 hours.")
     
+    # Schedule screenshot every hour
+    if not _scheduler.get_job('screenshot_update'):
+        _scheduler.add_job(
+            update_screenshot,
+            'interval',
+            hours=1,
+            id='screenshot_update',
+            replace_existing=True
+        )
+        print(f"[{datetime.now()}] Scheduled job 'screenshot_update' to run every hour.")
+    
     # Start scheduler
     if not _scheduler.running:
         _scheduler.start()
@@ -84,11 +108,25 @@ def start_scheduler():
             next_run = ship_job.next_run_time
             print(f"[{datetime.now()}] Next scheduled ship update: {next_run}")
         
+        screenshot_job = _scheduler.get_job('screenshot_update')
+        if screenshot_job:
+            next_run = screenshot_job.next_run_time
+            print(f"[{datetime.now()}] Next scheduled screenshot update: {next_run}")
+        
         # Register shutdown handler
         atexit.register(lambda: _scheduler.shutdown() if _scheduler else None)
     
-    # Run initial update
+    # Run initial updates
     print(f"[{datetime.now()}] Running initial update...")
     update_ship_location()
+    
+    # Take initial screenshot (after a short delay to let server start)
+    import threading
+    def delayed_screenshot():
+        import time
+        time.sleep(5)  # Wait 5 seconds for server to be ready
+        update_screenshot()
+    
+    threading.Thread(target=delayed_screenshot, daemon=True).start()
     
     return _scheduler
