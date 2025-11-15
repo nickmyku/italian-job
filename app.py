@@ -6,6 +6,7 @@ from datetime import datetime
 from scraper import scrape_ship_location
 from scheduler import start_scheduler
 from screenshot import SCREENSHOTS_DIR, ensure_screenshots_dir
+from hourly_screenshot import start_screenshot_service
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
@@ -209,4 +210,8 @@ if __name__ == '__main__':
     # Start scheduler - singleton pattern in scheduler.py prevents multiple instances
     # Disable reloader to prevent scheduler from being killed on code changes
     start_scheduler()
+    
+    # Start hourly screenshot service
+    start_screenshot_service()
+    
     app.run(host='0.0.0.0', port=3000, debug=True, use_reloader=False)
