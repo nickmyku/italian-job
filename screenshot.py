@@ -112,10 +112,10 @@ def take_screenshot():
         temp_png_path = os.path.join(SCREENSHOTS_DIR, 'temp_screenshot.png')
         driver.save_screenshot(temp_png_path)
         
-        # Convert PNG to BMP and resize to 1280x768 resolution
-        print(f"[{datetime.now()}] Converting to BMP format and resizing to 1280x768...")
+        # Convert PNG to BMP and resize to 800x480 resolution
+        print(f"[{datetime.now()}] Converting to BMP format and resizing to 800x480...")
         img = Image.open(temp_png_path)
-        img_resized = img.resize((1280, 768), Image.LANCZOS)
+        img_resized = img.resize((800, 480), Image.LANCZOS)
         
         # Save only to latest/location.bmp (no timestamped version to save memory)
         latest_dir = os.path.join(SCREENSHOTS_DIR, 'latest')
