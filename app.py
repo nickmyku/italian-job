@@ -5,7 +5,6 @@ import os
 from datetime import datetime
 from scraper import scrape_ship_location
 from scheduler import start_scheduler
-from screenshot import SCREENSHOTS_DIR, ensure_screenshots_dir
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
@@ -141,70 +140,8 @@ def manual_update():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/screenshots')
-def list_screenshots():
-    """List all available screenshots (only latest is kept)"""
-    ensure_screenshots_dir()
-    
-    screenshots = []
-    # Check for latest screenshot
-    latest_filepath = os.path.join(SCREENSHOTS_DIR, 'latest', 'location.bmp')
-    if os.path.exists(latest_filepath):
-        stat = os.stat(latest_filepath)
-        screenshots.append({
-            'filename': 'latest/location.bmp',
-            'url': '/screenshots/latest/location.bmp',
-            'timestamp': datetime.fromtimestamp(stat.st_mtime).isoformat(),
-            'size': stat.st_size
-        })
-    
-    return jsonify({'screenshots': screenshots})
-
-@app.route('/api/screenshots/<filename>')
-def get_screenshot(filename):
-    """Serve a specific screenshot"""
-    ensure_screenshots_dir()
-    
-    # Security: ensure filename doesn't contain path traversal
-    if '../' in filename:
-        return jsonify({'error': 'Screenshot not found'}), 404
-    
-    # Handle latest screenshot
-    if filename == 'latest' or filename == 'latest/location.bmp' or filename == 'location.bmp':
-        latest_filepath = os.path.join(SCREENSHOTS_DIR, 'latest', 'location.bmp')
-        if os.path.exists(latest_filepath):
-            return send_from_directory(os.path.join(SCREENSHOTS_DIR, 'latest'), 'location.bmp')
-    
-    return jsonify({'error': 'Screenshot not found'}), 404
-
-@app.route('/api/screenshots/latest')
-def get_latest_screenshot():
-    """Get the latest screenshot"""
-    ensure_screenshots_dir()
-    
-    latest_filepath = os.path.join(SCREENSHOTS_DIR, 'latest', 'location.bmp')
-    if not os.path.exists(latest_filepath):
-        return jsonify({'error': 'No screenshots available'}), 404
-    
-    return send_from_directory(os.path.join(SCREENSHOTS_DIR, 'latest'), 'location.bmp')
-
-@app.route('/screenshots/latest/location.bmp')
-def get_latest_screenshot_bmp():
-    """Serve the latest screenshot at /screenshots/latest/location.bmp"""
-    ensure_screenshots_dir()
-    
-    latest_filepath = os.path.join(SCREENSHOTS_DIR, 'latest', 'location.bmp')
-    
-    if not os.path.exists(latest_filepath):
-        return jsonify({'error': 'Latest screenshot not available'}), 404
-    
-    return send_from_directory(os.path.join(SCREENSHOTS_DIR, 'latest'), 'location.bmp')
-
 if __name__ == '__main__':
     init_db()
-    
-    # Ensure screenshots directory exists
-    ensure_screenshots_dir()
     
     # Start scheduler - singleton pattern in scheduler.py prevents multiple instances
     # Disable reloader to prevent scheduler from being killed on code changes
