@@ -9,6 +9,7 @@ This script (`hourly_screenshot.py`) takes a screenshot of a specified webpage o
 - ✅ Runs continuously in the background
 - ✅ Uses headless Chrome browser
 - ✅ Configurable URL and output path
+- ✅ **Automatically starts when Flask server starts**
 
 ## Requirements
 All required packages are already in `requirements.txt`:
@@ -27,18 +28,30 @@ SCREENSHOT_INTERVAL = 3600  # 1 hour in seconds
 
 ## Usage
 
-### Run the script:
+### Automatic Mode (Recommended) - Runs with Flask Server
+The screenshot service **automatically starts** when you run the Flask server:
+
 ```bash
-python hourly_screenshot.py
+python3 app.py
+```
+
+The hourly screenshot script will start in the background automatically!
+
+### Standalone Mode
+You can also run the script independently:
+
+```bash
+python3 hourly_screenshot.py
 ```
 
 ### Run in the background (Linux/Mac):
 ```bash
-nohup python hourly_screenshot.py > screenshot.log 2>&1 &
+nohup python3 hourly_screenshot.py > screenshot.log 2>&1 &
 ```
 
 ### Stop the script:
-Press `Ctrl+C` if running in foreground, or kill the process if running in background:
+- If running with Flask: Stop the Flask server (Ctrl+C)
+- If standalone: Press `Ctrl+C` or kill the process:
 ```bash
 ps aux | grep hourly_screenshot.py
 kill <process_id>
