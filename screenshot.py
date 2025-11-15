@@ -86,7 +86,8 @@ def take_screenshot():
             except Exception:
                 continue
         
-        # Check Chrome version
+        # Check Chrome version and extract version number
+        chrome_version = None
         for chrome_cmd in ['google-chrome', 'chromium-browser', 'chromium']:
             try:
                 result = subprocess.run([chrome_cmd, '--version'], 
@@ -96,6 +97,13 @@ def take_screenshot():
                     chrome_found = True
                     chrome_version_output = result.stdout.decode().strip()
                     print(f"[{datetime.now()}] Found Chrome: {chrome_version_output}")
+                    
+                    # Extract version number (e.g., "Google Chrome 120.0.6099.109" -> "120.0.6099.109")
+                    import re
+                    version_match = re.search(r'(\d+\.\d+\.\d+\.\d+|\d+\.\d+\.\d+)', chrome_version_output)
+                    if version_match:
+                        chrome_version = version_match.group(1)
+                        print(f"[{datetime.now()}] Extracted Chrome version: {chrome_version}")
                     break
             except (FileNotFoundError, subprocess.TimeoutExpired):
                 continue
@@ -110,19 +118,83 @@ def take_screenshot():
             from webdriver_manager.chrome import ChromeDriverManager
             
             # Get the driver path from ChromeDriverManager
-            driver_path = ChromeDriverManager().install()
-            if driver_path is None:
-                raise ValueError("ChromeDriverManager returned None")
+            # Pass version explicitly if we have it to avoid detection issues
+            driver_path = None
+            if chrome_version:
+                # Try multiple version formats to find one that works
+                version_attempts = [
+                    chrome_version,  # Full version: "120.0.6099.109"
+                    chrome_version.split('.')[0],  # Major version: "120"
+                    '.'.join(chrome_version.split('.')[:2]),  # Major.minor: "120.0"
+                ]
+                
+                for version_attempt in version_attempts:
+                    try:
+                        print(f"[{datetime.now()}] Attempting to use ChromeDriverManager with version {version_attempt}...")
+                        driver_path = ChromeDriverManager(version=version_attempt).install()
+                        if driver_path and isinstance(driver_path, str):
+                            print(f"[{datetime.now()}] Successfully got driver path with version {version_attempt}")
+                            break
+                    except (AttributeError, ValueError, TypeError) as version_error:
+                        error_str = str(version_error).lower()
+                        # Check if it's the specific split error
+                        if "'nonetype' object has no attribute 'split'" in error_str or "nonetype" in error_str:
+                            print(f"[{datetime.now()}] Version {version_attempt} failed with split error, trying next version format...")
+                            continue
+                        else:
+                            print(f"[{datetime.now()}] Version {version_attempt} failed: {version_error}, trying next version format...")
+                            continue
+                
+                # If all explicit versions failed, try auto-detection with error handling
+                if not driver_path or not isinstance(driver_path, str):
+                    print(f"[{datetime.now()}] All explicit versions failed, attempting auto-detection...")
+                    try:
+                        driver_path = ChromeDriverManager().install()
+                    except AttributeError as attr_error:
+                        error_str = str(attr_error).lower()
+                        # Catch the specific 'NoneType' object has no attribute 'split' error
+                        if "'nonetype' object has no attribute 'split'" in error_str or "nonetype" in error_str:
+                            print(f"[{datetime.now()}] ChromeDriverManager failed to detect Chrome version. This is a known issue with webdriver-manager.")
+                            print(f"[{datetime.now()}] The error occurs when ChromeDriverManager cannot detect Chrome version automatically.")
+                            # Re-raise to trigger fallback to Selenium's built-in manager
+                            raise AttributeError("ChromeDriverManager version detection failed")
+                        else:
+                            raise
+            else:
+                # Auto-detect version
+                try:
+                    driver_path = ChromeDriverManager().install()
+                except AttributeError as attr_error:
+                    error_str = str(attr_error).lower()
+                    # Catch the specific 'NoneType' object has no attribute 'split' error
+                    if "'nonetype' object has no attribute 'split'" in error_str or "nonetype" in error_str:
+                        print(f"[{datetime.now()}] ChromeDriverManager failed to detect Chrome version. This is a known issue with webdriver-manager.")
+                        print(f"[{datetime.now()}] The error occurs when ChromeDriverManager cannot detect Chrome version automatically.")
+                        # Re-raise to trigger fallback to Selenium's built-in manager
+                        raise AttributeError("ChromeDriverManager version detection failed")
+                    else:
+                        raise
+            
+            if driver_path is None or not isinstance(driver_path, str):
+                raise ValueError(f"ChromeDriverManager returned invalid value: {driver_path}")
+            
+            print(f"[{datetime.now()}] ChromeDriver path: {driver_path}")
             
             # Explicitly use ChromeDriverManager to bypass Selenium Manager
             service = Service(driver_path)
             driver = webdriver.Chrome(service=service, options=chrome_options)
         except ImportError:
             raise Exception("webdriver-manager package is required. Install it with: pip install -r requirements.txt")
-        except Exception as e:
+        except (AttributeError, ValueError, TypeError) as e:
             error_msg = str(e)
-            print(f"[{datetime.now()}] Error initializing Chrome driver with webdriver-manager: {error_msg}")
-            print(f"[{datetime.now()}] Attempting to use Selenium's built-in driver manager...")
+            error_type = type(e).__name__
+            print(f"[{datetime.now()}] Error initializing Chrome driver with webdriver-manager ({error_type}): {error_msg}")
+            
+            # If it's the specific split error, provide more helpful message
+            if "'NoneType' object has no attribute 'split'" in error_msg or "nonetype" in error_msg.lower():
+                print(f"[{datetime.now()}] ChromeDriverManager could not detect Chrome version. Attempting to use Selenium's built-in driver manager...")
+            else:
+                print(f"[{datetime.now()}] Attempting to use Selenium's built-in driver manager...")
             
             # Fallback to Selenium's built-in driver manager
             try:
@@ -130,7 +202,7 @@ def take_screenshot():
             except Exception as fallback_error:
                 fallback_error_msg = str(fallback_error)
                 print(f"[{datetime.now()}] Error with Selenium's built-in driver manager: {fallback_error_msg}")
-                raise Exception(f"Failed to initialize Chrome driver. webdriver-manager error: {error_msg}. Selenium error: {fallback_error_msg}. See README.md for installation instructions.")
+                raise Exception(f"Failed to initialize Chrome driver. webdriver-manager error ({error_type}): {error_msg}. Selenium error: {fallback_error_msg}. See README.md for installation instructions.")
         
         if not driver:
             raise Exception("Failed to initialize Chrome driver")
