@@ -105,32 +105,51 @@ def take_screenshot():
             print(f"[{datetime.now()}] Please install Chrome or Chromium. See README.md Installation section for instructions.")
             raise Exception("Chrome browser not found. Please install Chrome or Chromium.")
         
-        # Try to initialize ChromeDriver using webdriver-manager first
+        # Try Selenium's built-in driver manager first (Selenium 4.x has automatic driver management)
+        print(f"[{datetime.now()}] Attempting to initialize Chrome driver with Selenium's built-in manager...")
         try:
-            from webdriver_manager.chrome import ChromeDriverManager
+            driver = webdriver.Chrome(options=chrome_options)
+            print(f"[{datetime.now()}] Successfully initialized Chrome driver with Selenium's built-in manager")
+        except Exception as selenium_error:
+            selenium_error_msg = str(selenium_error)
+            print(f"[{datetime.now()}] Selenium's built-in manager failed: {selenium_error_msg}")
+            print(f"[{datetime.now()}] Attempting to use webdriver-manager as fallback...")
             
-            # Get the driver path from ChromeDriverManager
-            driver_path = ChromeDriverManager().install()
-            if driver_path is None:
-                raise ValueError("ChromeDriverManager returned None")
-            
-            # Explicitly use ChromeDriverManager to bypass Selenium Manager
-            service = Service(driver_path)
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-        except ImportError:
-            raise Exception("webdriver-manager package is required. Install it with: pip install -r requirements.txt")
-        except Exception as e:
-            error_msg = str(e)
-            print(f"[{datetime.now()}] Error initializing Chrome driver with webdriver-manager: {error_msg}")
-            print(f"[{datetime.now()}] Attempting to use Selenium's built-in driver manager...")
-            
-            # Fallback to Selenium's built-in driver manager
+            # Fallback to webdriver-manager
             try:
-                driver = webdriver.Chrome(options=chrome_options)
-            except Exception as fallback_error:
-                fallback_error_msg = str(fallback_error)
-                print(f"[{datetime.now()}] Error with Selenium's built-in driver manager: {fallback_error_msg}")
-                raise Exception(f"Failed to initialize Chrome driver. webdriver-manager error: {error_msg}. Selenium error: {fallback_error_msg}. See README.md for installation instructions.")
+                from webdriver_manager.chrome import ChromeDriverManager
+                
+                print(f"[{datetime.now()}] Initializing Chrome driver with webdriver-manager...")
+                
+                # Get the driver path from ChromeDriverManager with explicit error handling
+                try:
+                    driver_path = ChromeDriverManager().install()
+                    
+                    # Check if driver_path is None or empty
+                    if not driver_path:
+                        raise ValueError("ChromeDriverManager returned None or empty path")
+                    
+                    print(f"[{datetime.now()}] ChromeDriver path: {driver_path}")
+                    
+                    # Use the driver path from webdriver-manager
+                    service = Service(driver_path)
+                    driver = webdriver.Chrome(service=service, options=chrome_options)
+                    print(f"[{datetime.now()}] Successfully initialized Chrome driver with webdriver-manager")
+                    
+                except (AttributeError, TypeError, ValueError) as wdm_error:
+                    # Handle the specific 'NoneType' object has no attribute 'split' error
+                    # This occurs when webdriver-manager fails to detect Chrome version
+                    error_details = str(wdm_error)
+                    print(f"[{datetime.now()}] webdriver-manager error (Chrome version detection issue): {error_details}")
+                    raise Exception(f"webdriver-manager failed: {error_details}. This usually means Chrome/Chromium is not properly installed or its version cannot be detected.")
+                    
+            except ImportError:
+                print(f"[{datetime.now()}] webdriver-manager package not found")
+                raise Exception(f"Failed to initialize Chrome driver. Selenium error: {selenium_error_msg}. webdriver-manager not available. Install it with: pip install webdriver-manager")
+            except Exception as wdm_error:
+                wdm_error_msg = str(wdm_error)
+                print(f"[{datetime.now()}] webdriver-manager also failed: {wdm_error_msg}")
+                raise Exception(f"Failed to initialize Chrome driver with both methods. Selenium error: {selenium_error_msg}. webdriver-manager error: {wdm_error_msg}. See README.md for installation instructions.")
         
         if not driver:
             raise Exception("Failed to initialize Chrome driver")
