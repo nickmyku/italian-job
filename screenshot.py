@@ -68,53 +68,69 @@ def take_screenshot():
         # Set up ChromeDriver
         # Use webdriver-manager to bypass Selenium Manager issues
         driver = None
+        import subprocess
+        
+        # Check for Chrome binary and set it explicitly if found
+        chrome_binary = None
+        chrome_found = False
+        for chrome_cmd in ['google-chrome', 'chromium-browser', 'chromium']:
+            try:
+                result = subprocess.run(['which', chrome_cmd], 
+                                      capture_output=True, 
+                                      timeout=5)
+                if result.returncode == 0:
+                    chrome_binary = result.stdout.decode().strip()
+                    print(f"[{datetime.now()}] Using Chrome binary: {chrome_binary}")
+                    chrome_options.binary_location = chrome_binary
+                    break
+            except Exception:
+                continue
+        
+        # Check Chrome version
+        for chrome_cmd in ['google-chrome', 'chromium-browser', 'chromium']:
+            try:
+                result = subprocess.run([chrome_cmd, '--version'], 
+                                      capture_output=True, 
+                                      timeout=5)
+                if result.returncode == 0:
+                    chrome_found = True
+                    chrome_version_output = result.stdout.decode().strip()
+                    print(f"[{datetime.now()}] Found Chrome: {chrome_version_output}")
+                    break
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                continue
+        
+        if not chrome_found:
+            print(f"[{datetime.now()}] Chrome browser not found.")
+            print(f"[{datetime.now()}] Please install Chrome or Chromium. See README.md Installation section for instructions.")
+            raise Exception("Chrome browser not found. Please install Chrome or Chromium.")
+        
+        # Try to initialize ChromeDriver using webdriver-manager first
         try:
             from webdriver_manager.chrome import ChromeDriverManager
-            import subprocess
             
-            # Check for Chrome binary and set it explicitly if found
-            chrome_binary = None
-            for chrome_cmd in ['google-chrome', 'chromium-browser', 'chromium']:
-                try:
-                    result = subprocess.run(['which', chrome_cmd], 
-                                          capture_output=True, 
-                                          timeout=5)
-                    if result.returncode == 0:
-                        chrome_binary = result.stdout.decode().strip()
-                        print(f"[{datetime.now()}] Using Chrome binary: {chrome_binary}")
-                        chrome_options.binary_location = chrome_binary
-                        break
-                except Exception:
-                    continue
+            # Get the driver path from ChromeDriverManager
+            driver_path = ChromeDriverManager().install()
+            if driver_path is None:
+                raise ValueError("ChromeDriverManager returned None")
             
             # Explicitly use ChromeDriverManager to bypass Selenium Manager
-            service = Service(ChromeDriverManager().install())
+            service = Service(driver_path)
             driver = webdriver.Chrome(service=service, options=chrome_options)
         except ImportError:
             raise Exception("webdriver-manager package is required. Install it with: pip install -r requirements.txt")
         except Exception as e:
             error_msg = str(e)
-            print(f"[{datetime.now()}] Error initializing Chrome driver: {error_msg}")
+            print(f"[{datetime.now()}] Error initializing Chrome driver with webdriver-manager: {error_msg}")
+            print(f"[{datetime.now()}] Attempting to use Selenium's built-in driver manager...")
             
-            # Check if Chrome browser is installed and provide helpful error message
-            chrome_found = False
-            for chrome_cmd in ['google-chrome', 'chromium-browser', 'chromium']:
-                try:
-                    result = subprocess.run([chrome_cmd, '--version'], 
-                                          capture_output=True, 
-                                          timeout=5)
-                    if result.returncode == 0:
-                        chrome_found = True
-                        print(f"[{datetime.now()}] Found Chrome: {result.stdout.decode().strip()}")
-                        break
-                except (FileNotFoundError, subprocess.TimeoutExpired):
-                    continue
-            
-            if not chrome_found:
-                print(f"[{datetime.now()}] Chrome browser not found.")
-                print(f"[{datetime.now()}] Please install Chrome or Chromium. See README.md Installation section for instructions.")
-            
-            raise Exception(f"Failed to initialize Chrome driver: {error_msg}. See README.md for installation instructions.")
+            # Fallback to Selenium's built-in driver manager
+            try:
+                driver = webdriver.Chrome(options=chrome_options)
+            except Exception as fallback_error:
+                fallback_error_msg = str(fallback_error)
+                print(f"[{datetime.now()}] Error with Selenium's built-in driver manager: {fallback_error_msg}")
+                raise Exception(f"Failed to initialize Chrome driver. webdriver-manager error: {error_msg}. Selenium error: {fallback_error_msg}. See README.md for installation instructions.")
         
         if not driver:
             raise Exception("Failed to initialize Chrome driver")
