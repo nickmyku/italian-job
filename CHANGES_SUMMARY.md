@@ -1,7 +1,7 @@
 # Changes Summary - Screenshot Feature Update
 
 ## What Changed
-Modified the screenshot feature to serve the screenshot as a **direct file** accessible at `/screenshots/current.png` instead of displaying it in the web interface.
+Modified the screenshot feature to serve the screenshot as a **direct file** accessible at `/screenshots/current.bmp` instead of displaying it in the web interface. Screenshots are captured at 1280x768, resized to 800x480, and saved in BMP format.
 
 ## Key Changes
 
@@ -12,7 +12,7 @@ Modified the screenshot feature to serve the screenshot as a **direct file** acc
 - ❌ API endpoint `/api/screenshot` removed from `app.py`
 
 ### Added Direct File Access
-- ✅ Screenshot now saved to `static/screenshots/current.png`
+- ✅ Screenshot now saved to `static/screenshots/current.bmp` (captured at 1280x768, resized to 800x480)
 - ✅ New route `/screenshots/<filename>` added to serve screenshots
 - ✅ No-cache headers ensure latest screenshot is always served
 - ✅ Directory `static/screenshots/` created
@@ -21,12 +21,12 @@ Modified the screenshot feature to serve the screenshot as a **direct file** acc
 
 Simply navigate to:
 ```
-http://localhost:3000/screenshots/current.png
+http://localhost:3000/screenshots/current.bmp
 ```
 
 Or use in HTML:
 ```html
-<img src="http://localhost:3000/screenshots/current.png" alt="App Screenshot">
+<img src="http://localhost:3000/screenshots/current.bmp" alt="App Screenshot">
 ```
 
 ## Screenshot Behavior
@@ -35,7 +35,7 @@ Or use in HTML:
 - **Initial Capture**: 5 seconds after server starts
 - **Storage**: Only one screenshot stored - each new capture replaces the previous one
 - **Cache**: No caching - browsers always fetch the latest version
-- **Resolution**: 1920x1080 full-page screenshot
+- **Resolution**: Captured at 1280x768, resized to 800x480, saved as BMP format
 
 ## Running the Application
 
@@ -45,7 +45,7 @@ No changes needed to how you run the app:
 python app.py
 ```
 
-The screenshot will be accessible at `/screenshots/current.png` after ~5 seconds.
+The screenshot will be accessible at `/screenshots/current.bmp` after ~5 seconds.
 
 ## Benefits of This Approach
 
@@ -57,7 +57,7 @@ The screenshot will be accessible at `/screenshots/current.png` after ~5 seconds
 
 ## File Locations
 
-- Screenshot file: `static/screenshots/current.png`
+- Screenshot file: `static/screenshots/current.bmp` (800x480 BMP format)
 - Screenshot utility: `screenshot_util.py`
 - Scheduler config: `scheduler.py` (line ~90 for frequency)
 

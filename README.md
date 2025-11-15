@@ -1,6 +1,6 @@
 # Ship Tracker - Sagittarius Leader
 
-A web application that scrapes shipnext.com for the destination and location information of the ship "Sagittarius Leader" and displays it on an interactive map with automatic scheduled updates. The application also captures hourly screenshots of itself, accessible at `/screenshots/current.png`.
+A web application that scrapes shipnext.com for the destination and location information of the ship "Sagittarius Leader" and displays it on an interactive map with automatic scheduled updates. The application also captures hourly screenshots of itself, accessible at `/screenshots/current.bmp`.
 
 ## Project Overview
 
@@ -10,7 +10,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 - Displaying current location on an interactive map using Leaflet.js
 - Providing REST API endpoints for programmatic access
 - Automatically updating location data every 6 hours via scheduled background tasks
-- **NEW**: Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/current.png`
+- **NEW**: Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/current.bmp` (captured at 1280x768, resized to 800x480)
 
 ## Architecture
 
@@ -52,7 +52,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 │   ├── app.js               # Frontend JavaScript (map, API calls)
 │   ├── styles.css           # CSS styling
 │   └── screenshots/
-│       └── current.png      # Latest application screenshot (created at runtime)
+│       └── current.bmp      # Latest application screenshot (created at runtime)
 └── README.md                # This file
 ```
 
@@ -67,7 +67,7 @@ Main Flask application that:
   - `GET /api/location` - Returns latest ship location
   - `GET /api/history` - Returns last 30 location entries
   - `POST /api/update` - Manually triggers location update
-  - `GET /screenshots/current.png` - Serves the latest application screenshot
+  - `GET /screenshots/current.bmp` - Serves the latest application screenshot
 - Starts background scheduler on application startup
 - Runs on `0.0.0.0:3000` (accessible on all network interfaces)
 
@@ -114,8 +114,9 @@ Background task scheduler using APScheduler:
 Screenshot capture utility using Playwright:
 - **Browser**: Chromium (headless mode)
 - **Viewport**: 1920x1080
-- **Output**: Saves to `static/screenshots/current.png` (replaces previous screenshot)
-- **URL**: Screenshot accessible at `/screenshots/current.png`
+- **Output**: Saves to `static/screenshots/current.bmp` (replaces previous screenshot)
+- **Resolution**: Captured at 1280x768, resized to 800x480, saved as BMP format
+- **URL**: Screenshot accessible at `/screenshots/current.bmp`
 - **Functions**:
   - `take_screenshot(url)` - Captures full-page screenshot of the application
   - `get_screenshot_path()` - Returns path to current screenshot
@@ -207,7 +208,7 @@ The application will:
 ### Access the Application:
 - Web interface: `http://localhost:3000`
 - API endpoint: `http://localhost:3000/api/location`
-- Screenshot: `http://localhost:3000/screenshots/current.png`
+- Screenshot: `http://localhost:3000/screenshots/current.bmp`
 
 **Note**: The Flask server runs with `debug=True` and `use_reloader=False` (reloader disabled to prevent scheduler conflicts).
 
@@ -282,7 +283,7 @@ Manually triggers a location update by scraping shipnext.com.
 }
 ```
 
-### GET /screenshots/current.png
+### GET /screenshots/current.bmp
 Serves the latest application screenshot as a PNG image file.
 
 **Response** (200 OK):
@@ -346,11 +347,11 @@ python test_destination.py
 
 ### Screenshot Not Accessible
 1. Verify Playwright browsers are installed: Run `playwright install chromium`
-2. Check if screenshot file exists: Look for `static/screenshots/current.png`
+2. Check if screenshot file exists: Look for `static/screenshots/current.bmp`
 3. Check console for screenshot capture errors
 4. Ensure the Flask server is accessible at `http://localhost:3000`
 5. Wait at least 5 seconds after server start for initial screenshot
-6. Try accessing directly: `http://localhost:3000/screenshots/current.png`
+6. Try accessing directly: `http://localhost:3000/screenshots/current.bmp`
 
 ### No Location Data Displayed
 1. Check if scraper is fetching data: Look for debug messages in console
