@@ -88,8 +88,17 @@ def take_screenshot():
                     continue
             
             # Explicitly use ChromeDriverManager to bypass Selenium Manager
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=chrome_options)
+            try:
+                driver_path = ChromeDriverManager().install()
+                if not driver_path or not isinstance(driver_path, str) or not driver_path.strip():
+                    raise Exception(f"ChromeDriverManager failed to install or return valid driver path. Got: {driver_path}")
+                print(f"[{datetime.now()}] ChromeDriver path: {driver_path}")
+                service = Service(driver_path)
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+            except AttributeError as e:
+                if "'NoneType' object has no attribute 'split'" in str(e):
+                    raise Exception("ChromeDriverManager returned None. This may indicate a network issue or ChromeDriver download failure. Check your internet connection and try again.")
+                raise
         except ImportError:
             raise Exception("webdriver-manager package is required. Install it with: pip install -r requirements.txt")
         except Exception as e:
