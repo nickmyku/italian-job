@@ -66,23 +66,57 @@ def take_screenshot():
         chrome_options.add_argument('--disable-software-rasterizer')
         
         # Set up ChromeDriver
+        # Use webdriver-manager to avoid Selenium Manager issues
         driver = None
         try:
-            # Try to use ChromeDriver from PATH
-            driver = webdriver.Chrome(options=chrome_options)
+            from webdriver_manager.chrome import ChromeDriverManager
+            import subprocess
+            
+            # Check for Chrome binary and set it explicitly if found
+            chrome_binary = None
+            for chrome_cmd in ['google-chrome', 'chromium-browser', 'chromium']:
+                try:
+                    result = subprocess.run(['which', chrome_cmd], 
+                                          capture_output=True, 
+                                          timeout=5)
+                    if result.returncode == 0:
+                        chrome_binary = result.stdout.decode().strip()
+                        print(f"[{datetime.now()}] Using Chrome binary: {chrome_binary}")
+                        chrome_options.binary_location = chrome_binary
+                        break
+                except Exception:
+                    continue
+            
+            # Explicitly use ChromeDriverManager to bypass Selenium Manager
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+        except ImportError:
+            print(f"[{datetime.now()}] Error: webdriver-manager not available. Installing...")
+            raise Exception("webdriver-manager package is required. Install it with: pip install webdriver-manager")
         except Exception as e:
-            print(f"[{datetime.now()}] Warning: Could not initialize Chrome driver: {e}")
-            print(f"[{datetime.now()}] Attempting to use ChromeDriverManager...")
-            try:
-                from webdriver_manager.chrome import ChromeDriverManager
-                service = Service(ChromeDriverManager().install())
-                driver = webdriver.Chrome(service=service, options=chrome_options)
-            except ImportError:
-                print(f"[{datetime.now()}] webdriver-manager not available. Please install ChromeDriver manually.")
-                raise
-            except Exception as e2:
-                print(f"[{datetime.now()}] Error with ChromeDriverManager: {e2}")
-                raise
+            error_msg = str(e)
+            print(f"[{datetime.now()}] Error initializing Chrome driver: {error_msg}")
+            
+            # Check if Chrome browser is installed
+            chrome_found = False
+            for chrome_cmd in ['google-chrome', 'chromium-browser', 'chromium']:
+                try:
+                    result = subprocess.run([chrome_cmd, '--version'], 
+                                          capture_output=True, 
+                                          timeout=5)
+                    if result.returncode == 0:
+                        chrome_found = True
+                        print(f"[{datetime.now()}] Found Chrome: {result.stdout.decode().strip()}")
+                        break
+                except (FileNotFoundError, subprocess.TimeoutExpired):
+                    continue
+            
+            if not chrome_found:
+                print(f"[{datetime.now()}] Chrome browser not found. Please install Chrome or Chromium.")
+                print(f"[{datetime.now()}] On Ubuntu/Debian: sudo apt-get update && sudo apt-get install -y chromium-browser")
+                print(f"[{datetime.now()}] Or install Google Chrome: https://www.google.com/chrome/")
+            
+            raise Exception(f"Failed to initialize Chrome driver: {error_msg}")
         
         if not driver:
             raise Exception("Failed to initialize Chrome driver")
