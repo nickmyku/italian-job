@@ -1,15 +1,15 @@
 # Screenshot Feature Implementation
 
 ## Overview
-Added automatic screenshot capture functionality to the Ship Tracker application. The system now takes a screenshot of the web application every hour and makes it accessible at `/screenshots/current.bmp`. Screenshots are captured at 1280x768 resolution, resized to 800x480, and saved in BMP format.
+Added automatic screenshot capture functionality to the Ship Tracker application. The system now takes a screenshot of the web application every hour and makes it accessible at `/screenshots/current.bmp`. Screenshots are captured at 1440x960 resolution, resized to 960x640, and saved in BMP format.
 
 ## Changes Made
 
 ### 1. New File: `screenshot_util.py`
 - Utilizes Playwright to capture screenshots in headless Chromium browser
-- Viewport size: 1280x768
+- Viewport size: 1440x960
 - Captures full-page screenshots
-- Resizes to 800x480 using PIL/Pillow
+- Resizes to 960x640 using PIL/Pillow
 - Converts to BMP format
 - Saves to `static/screenshots/current.bmp` (replaces previous screenshot)
 - Functions:
@@ -45,8 +45,8 @@ Added automatic screenshot capture functionality to the Ship Tracker application
 ## How It Works
 
 1. **Scheduler**: Every hour, the background scheduler calls `update_screenshot()`
-2. **Screenshot Capture**: Playwright launches a headless Chromium browser at 1280x768 resolution, navigates to `http://localhost:3000`, waits for page load, and captures a full-page screenshot
-3. **Image Processing**: PIL/Pillow resizes the screenshot from 1280x768 to 800x480
+2. **Screenshot Capture**: Playwright launches a headless Chromium browser at 1440x960 resolution, navigates to `http://localhost:3000`, waits for page load, and captures a full-page screenshot
+3. **Image Processing**: PIL/Pillow resizes the screenshot from 1440x960 to 960x640
 4. **Format Conversion**: The image is converted from PNG to BMP format
 5. **Storage**: Screenshot is saved to `static/screenshots/current.bmp` (replaces previous one)
 6. **Direct Access**: Screenshot is accessible directly at `/screenshots/current.bmp` via Flask's custom route
@@ -84,10 +84,10 @@ You can view it in a browser, embed it in other pages, or fetch it programmatica
 Edit `screenshot_util.py` to modify capture resolution (line 24) or output size (line 42):
 ```python
 # Capture resolution
-page = browser.new_page(viewport={'width': 1280, 'height': 768})
+page = browser.new_page(viewport={'width': 1440, 'height': 960})
 
 # Output size
-resized_img = img.resize((800, 480), Image.Resampling.LANCZOS)
+resized_img = img.resize((960, 640), Image.Resampling.LANCZOS)
 ```
 
 ## Screenshot Endpoint
@@ -95,7 +95,7 @@ resized_img = img.resize((800, 480), Image.Resampling.LANCZOS)
 ### GET /screenshots/current.bmp
 
 **Success Response (200)**:
-- Returns BMP image file (800x480 resolution)
+- Returns BMP image file (960x640 resolution)
 - Content-Type: `image/bmp`
 - Cache-Control: `no-cache, no-store, must-revalidate`
 
