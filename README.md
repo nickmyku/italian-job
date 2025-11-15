@@ -139,8 +139,8 @@ Screenshot capture module using Selenium WebDriver:
    - Main screenshot capture function
    - **Process**:
      1. Checks for Chrome/Chromium browser installation and prints version (informational)
-     2. Initializes Chrome WebDriver in headless mode using `webdriver-manager` (primary method)
-     3. Falls back to Selenium's built-in driver manager if `webdriver-manager` fails
+     2. Initializes Chrome WebDriver in headless mode using Selenium's built-in driver manager (primary method)
+     3. Falls back to `webdriver-manager` if Selenium's built-in manager fails
      4. Navigates to `APP_URL` (http://localhost:3000 by default)
      5. Waits up to 30 seconds for map element (`#map`) to load
      6. Additional 3-second wait for map tiles to render
@@ -152,20 +152,25 @@ Screenshot capture module using Selenium WebDriver:
      12. Removes temporary PNG file
      13. Closes browser and returns file path
    - **Error Handling**: 
+     - Tries Selenium's built-in driver manager first (most reliable for Selenium 4.x)
+     - Automatically falls back to `webdriver-manager` if primary method fails
      - Validates ChromeDriverManager returns a valid driver path (not None)
-     - Catches and handles `webdriver-manager` errors gracefully
-     - Falls back to Selenium's built-in driver manager automatically
+     - Specifically catches and handles the `'NoneType' object has no attribute 'split'` error
+     - Provides detailed error messages indicating which initialization method was attempted
      - Returns `None` on failure, prints detailed error messages to console
    - **Returns**: `str` path to saved screenshot file (`screenshots/latest/location.bmp`) or `None` on error
 
 **ChromeDriver Initialization**:
 The code uses a two-tier approach for ChromeDriver initialization:
-1. **Primary Method**: Uses `webdriver-manager` package to automatically download and manage ChromeDriver
+1. **Primary Method**: Uses Selenium's built-in driver manager (Selenium 4.15+)
+   - Most reliable method with automatic driver management
+   - Works out-of-the-box if Chrome/Chromium is properly installed
+   - Recommended for Selenium 4.x users
+2. **Fallback Method**: If Selenium's built-in manager fails, automatically falls back to `webdriver-manager` package
+   - Provides alternative driver download and management
    - Validates that the driver path is not None before use
-   - Handles internal `webdriver-manager` errors gracefully
-2. **Fallback Method**: If `webdriver-manager` fails, automatically falls back to Selenium's built-in driver manager
-   - This ensures the application continues to work even if `webdriver-manager` has issues
-   - Selenium 4.15+ includes built-in driver management capabilities
+   - Handles the `'NoneType' object has no attribute 'split'` error gracefully
+   - This ensures the application continues to work even if the primary method has issues
 
 **Dependencies**:
 - Selenium WebDriver (Chrome)
@@ -179,12 +184,15 @@ The code uses a two-tier approach for ChromeDriver initialization:
 
 **Usage Notes**:
 - **Requires Chrome/Chromium browser to be installed** (see Installation section)
-- ChromeDriver is automatically managed by `webdriver-manager` package (with fallback to Selenium's built-in manager)
+- ChromeDriver is automatically managed by Selenium's built-in manager (with fallback to `webdriver-manager` package)
 - The message "Found Chrome: chromium 142.0.7444.59..." is informational and indicates Chrome was detected successfully
 - App must be running on `localhost:3000` before calling `take_screenshot()`
 - Screenshot capture is CPU and memory intensive; runs in background via scheduler
 - Old screenshots are automatically cleaned up to prevent disk space issues
-- The code includes robust error handling for ChromeDriver initialization issues
+- The code includes robust error handling for ChromeDriver initialization issues, including:
+  - Automatic fallback between Selenium's manager and webdriver-manager
+  - Specific handling for the `'NoneType' object has no attribute 'split'` error
+  - Clear error messages indicating which initialization method is being used
 
 ### static/app.js
 Frontend JavaScript that:
@@ -225,9 +233,9 @@ CSS styling for the application (not included in file review, but referenced).
 - `lxml==4.9.3` - XML/HTML parser backend
 - `apscheduler==3.10.4` - Background job scheduling
 - `geopy==2.4.1` - Geocoding service (Nominatim)
-- `selenium` - WebDriver for browser automation (screenshot capture)
-- `Pillow` (or `PIL`) - Image processing library for screenshot conversion and resizing
-- `webdriver-manager` (optional) - Automatic ChromeDriver management
+- `selenium==4.15.2` - WebDriver for browser automation (screenshot capture, includes built-in driver manager)
+- `Pillow==10.1.0` - Image processing library for screenshot conversion and resizing
+- `webdriver-manager==4.0.2` - Automatic ChromeDriver management (fallback method)
 
 ### External Services
 - **shipnext.com** - Source of ship location data
@@ -510,11 +518,16 @@ python test_destination.py
 
 ### Screenshot Capture Issues
 1. **ChromeDriver initialization errors**:
-   - **"'nonetype' object has not attribute 'slpit'" error**:
-     - This error occurs when `webdriver-manager` encounters an internal issue
-     - The code now includes automatic fallback to Selenium's built-in driver manager
-     - If you see this error, the fallback should activate automatically
-     - Check console logs for "Attempting to use Selenium's built-in driver manager..." message
+   - **"'NoneType' object has no attribute 'split'" error**:
+     - This error occurs when `webdriver-manager` fails to detect the Chrome browser version
+     - **Solution**: The code now tries Selenium's built-in driver manager first (most reliable)
+     - If Selenium's manager fails, it automatically falls back to `webdriver-manager`
+     - The error is now caught and handled gracefully with automatic fallback
+     - Check console logs for messages indicating which initialization method is being used:
+       - "Attempting to initialize Chrome driver with Selenium's built-in manager..."
+       - "Attempting to use webdriver-manager as fallback..."
+     - **If both methods fail**: Ensure Chrome/Chromium is properly installed and accessible
+     - **Quick fix**: Update dependencies with `pip install -r requirements.txt --upgrade`
    
    - **ChromeDriver not found / Selenium Manager errors**:
      - **Required**: Install Chrome or Chromium browser on the system
@@ -537,7 +550,7 @@ python test_destination.py
      - **macOS**: `brew install --cask google-chrome`
      - **Windows**: Download and install from https://www.google.com/chrome/
      - The `webdriver-manager` package (already in requirements.txt) will automatically download and manage ChromeDriver
-     - **Note**: The code uses `webdriver-manager` as primary method with automatic fallback to Selenium's built-in manager. Ensure Chrome/Chromium is installed before running the application.
+     - **Note**: The code now uses Selenium's built-in driver manager as the primary method (most reliable for Selenium 4.x) with automatic fallback to `webdriver-manager`. Ensure Chrome/Chromium is installed before running the application.
    
    - **"Found Chrome: chromium 142.0.7444.59..." message**:
      - This is an **informational message**, not an error
@@ -567,10 +580,17 @@ python test_destination.py
    - Check if old screenshots are being cleaned up properly
 
 6. **Driver initialization troubleshooting**:
-   - The code now validates that ChromeDriverManager returns a valid path (not None)
-   - If `webdriver-manager` fails, the code automatically attempts Selenium's built-in manager
-   - Check console logs for messages indicating which driver manager is being used
+   - **Initialization order**: Selenium's built-in manager (primary) → webdriver-manager (fallback)
+   - The code validates that ChromeDriverManager returns a valid path (not None)
+   - Specifically handles the `'NoneType' object has no attribute 'split'` error from webdriver-manager
+   - Check console logs for messages indicating which driver manager is being used:
+     - Success message: "Successfully initialized Chrome driver with..."
+     - Fallback message: "Attempting to use webdriver-manager as fallback..."
    - Both methods should work if Chrome/Chromium is properly installed
+   - **If both fail**: 
+     - Verify Chrome/Chromium installation: `google-chrome --version` or `chromium-browser --version`
+     - Clear webdriver-manager cache: `rm -rf ~/.wdm/`
+     - Reinstall dependencies: `pip install -r requirements.txt --force-reinstall`
 
 ## Data Extraction Details
 
@@ -639,13 +659,20 @@ Screenshots can be accessed via:
 
 ## Recent Changes
 
-### ChromeDriver Initialization Improvements (Latest)
-- **Fixed**: "'nonetype' object has not attribute 'slpit'" error handling
-  - Added validation to ensure ChromeDriverManager returns a valid driver path
-  - Implemented automatic fallback to Selenium's built-in driver manager
-  - Improved error messages for better troubleshooting
+### ChromeDriver Initialization Improvements (Latest - 2025-11-15)
+- **Fixed**: `'NoneType' object has no attribute 'split'` error from webdriver-manager
+  - **Root cause**: webdriver-manager 4.0.1 had issues detecting Chrome browser version
+  - **Solution**: Reversed initialization strategy - now tries Selenium's built-in manager first
+  - **Benefits**: Selenium 4.x's built-in manager is more reliable and works out-of-the-box
+  - Added validation to ensure ChromeDriverManager returns a valid driver path (not None)
+  - Implemented automatic fallback to webdriver-manager if Selenium's manager fails
+  - Upgraded webdriver-manager from 4.0.1 to 4.0.2 (improved Chrome version detection)
+- **Enhanced Error Handling**:
+  - Catches `AttributeError`, `TypeError`, and `ValueError` specifically from webdriver-manager
+  - Provides detailed error messages indicating which initialization method is being used
+  - Clear logging shows primary method attempt and fallback activation
 - **Clarified**: "Found Chrome: chromium..." message is informational, not an error
-- **Enhanced**: Error handling now provides detailed messages for both primary and fallback driver initialization methods
+- **Improved Reliability**: Two-tier fallback system ensures screenshot functionality works in most environments
 
 ## Future Enhancements
 
