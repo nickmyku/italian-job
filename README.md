@@ -155,17 +155,20 @@ Screenshot capture module using Selenium WebDriver:
 **Dependencies**:
 - Selenium WebDriver (Chrome)
 - PIL/Pillow (for image processing)
-- ChromeDriver (auto-managed via webdriver-manager if available)
+- ChromeDriver (auto-managed via webdriver-manager)
+- Chrome or Chromium browser (must be installed separately - see Installation section)
 
 **Constants**:
 - `SCREENSHOTS_DIR = 'screenshots'` - Output directory name
 - `APP_URL = 'http://localhost:3000'` - Web application URL to capture
 
 **Usage Notes**:
-- Requires Chrome/Chromium browser and ChromeDriver installed
+- **Requires Chrome/Chromium browser to be installed** (see Installation section)
+- ChromeDriver is automatically managed by `webdriver-manager` package
 - App must be running on `localhost:3000` before calling `take_screenshot()`
 - Screenshot capture is CPU and memory intensive; runs in background via scheduler
 - Old screenshots are automatically cleaned up to prevent disk space issues
+- If you see "unable to obtain driver for chrome using selenium manager" error, ensure Chrome/Chromium is installed and `webdriver-manager` is in requirements.txt
 
 ### static/app.js
 Frontend JavaScript that:
@@ -218,12 +221,18 @@ CSS styling for the application (not included in file review, but referenced).
 
 ## Installation
 
-1. **Install Python dependencies**:
+1. **Install Chrome/Chromium browser** (required for screenshot functionality):
+   - **Ubuntu/Debian**: See "Screenshot Capture Issues" section in Troubleshooting for installation commands
+   - **macOS**: `brew install --cask google-chrome`
+   - **Windows**: Download from https://www.google.com/chrome/
+   - Verify installation: `google-chrome --version` or `chromium-browser --version`
+
+2. **Install Python dependencies**:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. **Verify installation**:
+3. **Verify installation**:
 ```bash
 python test_destination.py
 ```
@@ -484,10 +493,24 @@ python test_destination.py
 3. Verify SQLite3 is installed on system
 
 ### Screenshot Capture Issues
-1. **ChromeDriver not found**:
-   - Install Chrome/Chromium browser on the system
-   - Install ChromeDriver: `apt-get install chromium-chromedriver` (Linux) or download from ChromeDriver website
-   - Alternatively, install `webdriver-manager` package for automatic driver management
+1. **ChromeDriver not found / Selenium Manager errors**:
+   - **Required**: Install Chrome or Chromium browser on the system
+   - **Ubuntu/Debian**: 
+     ```bash
+     # Option 1: Install Google Chrome
+     wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+     echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+     sudo apt-get update
+     sudo apt-get install -y google-chrome-stable
+     
+     # Option 2: Install Chromium (if snap is available)
+     sudo snap install chromium
+     ```
+   - **Other Linux distributions**: Install Chrome/Chromium using your package manager
+   - **macOS**: `brew install --cask google-chrome`
+   - **Windows**: Download and install from https://www.google.com/chrome/
+   - The `webdriver-manager` package (already in requirements.txt) will automatically download and manage ChromeDriver
+   - **Note**: The code uses `webdriver-manager` to bypass Selenium Manager issues. Ensure Chrome/Chromium is installed before running the application.
 
 2. **Screenshot directory permissions**:
    - Ensure write permissions for `screenshots/` directory

@@ -66,7 +66,7 @@ def take_screenshot():
         chrome_options.add_argument('--disable-software-rasterizer')
         
         # Set up ChromeDriver
-        # Use webdriver-manager to avoid Selenium Manager issues
+        # Use webdriver-manager to bypass Selenium Manager issues
         driver = None
         try:
             from webdriver_manager.chrome import ChromeDriverManager
@@ -91,13 +91,12 @@ def take_screenshot():
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
         except ImportError:
-            print(f"[{datetime.now()}] Error: webdriver-manager not available. Installing...")
-            raise Exception("webdriver-manager package is required. Install it with: pip install webdriver-manager")
+            raise Exception("webdriver-manager package is required. Install it with: pip install -r requirements.txt")
         except Exception as e:
             error_msg = str(e)
             print(f"[{datetime.now()}] Error initializing Chrome driver: {error_msg}")
             
-            # Check if Chrome browser is installed
+            # Check if Chrome browser is installed and provide helpful error message
             chrome_found = False
             for chrome_cmd in ['google-chrome', 'chromium-browser', 'chromium']:
                 try:
@@ -112,11 +111,10 @@ def take_screenshot():
                     continue
             
             if not chrome_found:
-                print(f"[{datetime.now()}] Chrome browser not found. Please install Chrome or Chromium.")
-                print(f"[{datetime.now()}] On Ubuntu/Debian: sudo apt-get update && sudo apt-get install -y chromium-browser")
-                print(f"[{datetime.now()}] Or install Google Chrome: https://www.google.com/chrome/")
+                print(f"[{datetime.now()}] Chrome browser not found.")
+                print(f"[{datetime.now()}] Please install Chrome or Chromium. See README.md Installation section for instructions.")
             
-            raise Exception(f"Failed to initialize Chrome driver: {error_msg}")
+            raise Exception(f"Failed to initialize Chrome driver: {error_msg}. See README.md for installation instructions.")
         
         if not driver:
             raise Exception("Failed to initialize Chrome driver")
