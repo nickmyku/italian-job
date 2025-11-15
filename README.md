@@ -42,6 +42,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 ├── scraper.py                # Web scraping logic for shipnext.com
 ├── scheduler.py              # Background scheduler for automatic updates
 ├── screenshot.py             # Screenshot capture functionality using Selenium
+├── install_chromedriver.py   # Pre-install ChromeDriver script (run before app.py)
 ├── requirements.txt          # Python dependencies
 ├── test_destination.py      # Test suite for scraper and database
 ├── ship_locations.db         # SQLite database (created at runtime)
@@ -110,6 +111,16 @@ Background task scheduler using APScheduler:
 - **Screenshot Integration**: Automatically takes initial screenshot 5 seconds after startup, then hourly
 
 **Important**: Scheduler runs in background thread, separate from Flask's main thread.
+
+### install_chromedriver.py
+Pre-installation script for ChromeDriver:
+- **Purpose**: Downloads and caches ChromeDriver before the application starts
+- **Usage**: Run `python install_chromedriver.py` before starting the app
+- **Benefits**: 
+  - Catches installation issues early
+  - Avoids runtime delays when first taking screenshots
+  - Provides clear error messages if installation fails
+- **Returns**: Exit code 0 on success, 1 on failure
 
 ### screenshot.py
 Screenshot capture module using Selenium WebDriver:
@@ -232,7 +243,13 @@ CSS styling for the application (not included in file review, but referenced).
 pip install -r requirements.txt
 ```
 
-3. **Verify installation**:
+3. **Pre-install ChromeDriver** (recommended, especially for first-time setup):
+```bash
+python install_chromedriver.py
+```
+This will download and cache ChromeDriver before starting the application, helping to catch any installation issues early. If this step fails, check your internet connection and ensure Chrome/Chromium is installed.
+
+4. **Verify installation**:
 ```bash
 python test_destination.py
 ```
@@ -494,6 +511,12 @@ python test_destination.py
 
 ### Screenshot Capture Issues
 1. **ChromeDriver not found / Selenium Manager errors**:
+   - **Pre-install ChromeDriver** (recommended):
+     ```bash
+     python install_chromedriver.py
+     ```
+     This will download and cache ChromeDriver. If this fails, check your internet connection.
+   
    - **Required**: Install Chrome or Chromium browser on the system
    - **Ubuntu/Debian**: 
      ```bash

@@ -105,6 +105,9 @@ def take_screenshot():
             error_msg = str(e)
             print(f"[{datetime.now()}] Error initializing Chrome driver: {error_msg}")
             
+            # Suggest running the pre-install script
+            print(f"[{datetime.now()}] TIP: Try running 'python install_chromedriver.py' before starting the app to pre-install ChromeDriver.")
+            
             # Check if Chrome browser is installed and provide helpful error message
             chrome_found = False
             for chrome_cmd in ['google-chrome', 'chromium-browser', 'chromium']:
