@@ -138,24 +138,39 @@ Screenshot capture module using Selenium WebDriver:
 3. **`take_screenshot()`**:
    - Main screenshot capture function
    - **Process**:
-     1. Initializes Chrome WebDriver in headless mode
-     2. Navigates to `APP_URL` (http://localhost:3000 by default)
-     3. Waits up to 30 seconds for map element (`#map`) to load
-     4. Additional 3-second wait for map tiles to render
-     5. Calls `cleanup_old_screenshots()` before capture
-     6. Captures screenshot at 1600x960 and saves as temporary PNG
-     7. Resizes image to 800x480 resolution using PIL/Pillow
-     8. Converts PNG to BMP format
-     9. Saves final BMP to `screenshots/latest/location.bmp`
-     10. Removes temporary PNG file
-     11. Closes browser and returns file path
-   - **Error Handling**: Returns `None` on failure, prints error messages to console
+     1. Checks for Chrome/Chromium browser installation and prints version (informational)
+     2. Initializes Chrome WebDriver in headless mode using `webdriver-manager` (primary method)
+     3. Falls back to Selenium's built-in driver manager if `webdriver-manager` fails
+     4. Navigates to `APP_URL` (http://localhost:3000 by default)
+     5. Waits up to 30 seconds for map element (`#map`) to load
+     6. Additional 3-second wait for map tiles to render
+     7. Calls `cleanup_old_screenshots()` before capture
+     8. Captures screenshot at 1600x960 and saves as temporary PNG
+     9. Resizes image to 800x480 resolution using PIL/Pillow
+     10. Converts PNG to BMP format
+     11. Saves final BMP to `screenshots/latest/location.bmp`
+     12. Removes temporary PNG file
+     13. Closes browser and returns file path
+   - **Error Handling**: 
+     - Validates ChromeDriverManager returns a valid driver path (not None)
+     - Catches and handles `webdriver-manager` errors gracefully
+     - Falls back to Selenium's built-in driver manager automatically
+     - Returns `None` on failure, prints detailed error messages to console
    - **Returns**: `str` path to saved screenshot file (`screenshots/latest/location.bmp`) or `None` on error
+
+**ChromeDriver Initialization**:
+The code uses a two-tier approach for ChromeDriver initialization:
+1. **Primary Method**: Uses `webdriver-manager` package to automatically download and manage ChromeDriver
+   - Validates that the driver path is not None before use
+   - Handles internal `webdriver-manager` errors gracefully
+2. **Fallback Method**: If `webdriver-manager` fails, automatically falls back to Selenium's built-in driver manager
+   - This ensures the application continues to work even if `webdriver-manager` has issues
+   - Selenium 4.15+ includes built-in driver management capabilities
 
 **Dependencies**:
 - Selenium WebDriver (Chrome)
 - PIL/Pillow (for image processing)
-- ChromeDriver (auto-managed via webdriver-manager)
+- ChromeDriver (auto-managed via webdriver-manager or Selenium's built-in manager)
 - Chrome or Chromium browser (must be installed separately - see Installation section)
 
 **Constants**:
@@ -164,11 +179,12 @@ Screenshot capture module using Selenium WebDriver:
 
 **Usage Notes**:
 - **Requires Chrome/Chromium browser to be installed** (see Installation section)
-- ChromeDriver is automatically managed by `webdriver-manager` package
+- ChromeDriver is automatically managed by `webdriver-manager` package (with fallback to Selenium's built-in manager)
+- The message "Found Chrome: chromium 142.0.7444.59..." is informational and indicates Chrome was detected successfully
 - App must be running on `localhost:3000` before calling `take_screenshot()`
 - Screenshot capture is CPU and memory intensive; runs in background via scheduler
 - Old screenshots are automatically cleaned up to prevent disk space issues
-- If you see "unable to obtain driver for chrome using selenium manager" error, ensure Chrome/Chromium is installed and `webdriver-manager` is in requirements.txt
+- The code includes robust error handling for ChromeDriver initialization issues
 
 ### static/app.js
 Frontend JavaScript that:
@@ -493,24 +509,41 @@ python test_destination.py
 3. Verify SQLite3 is installed on system
 
 ### Screenshot Capture Issues
-1. **ChromeDriver not found / Selenium Manager errors**:
-   - **Required**: Install Chrome or Chromium browser on the system
-   - **Ubuntu/Debian**: 
-     ```bash
-     # Option 1: Install Google Chrome
-     wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-     echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-     sudo apt-get update
-     sudo apt-get install -y google-chrome-stable
-     
-     # Option 2: Install Chromium (if snap is available)
-     sudo snap install chromium
-     ```
-   - **Other Linux distributions**: Install Chrome/Chromium using your package manager
-   - **macOS**: `brew install --cask google-chrome`
-   - **Windows**: Download and install from https://www.google.com/chrome/
-   - The `webdriver-manager` package (already in requirements.txt) will automatically download and manage ChromeDriver
-   - **Note**: The code uses `webdriver-manager` to bypass Selenium Manager issues. Ensure Chrome/Chromium is installed before running the application.
+1. **ChromeDriver initialization errors**:
+   - **"'nonetype' object has not attribute 'slpit'" error**:
+     - This error occurs when `webdriver-manager` encounters an internal issue
+     - The code now includes automatic fallback to Selenium's built-in driver manager
+     - If you see this error, the fallback should activate automatically
+     - Check console logs for "Attempting to use Selenium's built-in driver manager..." message
+   
+   - **ChromeDriver not found / Selenium Manager errors**:
+     - **Required**: Install Chrome or Chromium browser on the system
+     - **Ubuntu/Debian**: 
+       ```bash
+       # Option 1: Install Google Chrome
+       wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+       echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+       sudo apt-get update
+       sudo apt-get install -y google-chrome-stable
+       
+       # Option 2: Install Chromium (if snap is available)
+       sudo snap install chromium
+       
+       # Option 3: Install Chromium via apt (Debian/Ubuntu)
+       sudo apt-get update
+       sudo apt-get install -y chromium-browser
+       ```
+     - **Other Linux distributions**: Install Chrome/Chromium using your package manager
+     - **macOS**: `brew install --cask google-chrome`
+     - **Windows**: Download and install from https://www.google.com/chrome/
+     - The `webdriver-manager` package (already in requirements.txt) will automatically download and manage ChromeDriver
+     - **Note**: The code uses `webdriver-manager` as primary method with automatic fallback to Selenium's built-in manager. Ensure Chrome/Chromium is installed before running the application.
+   
+   - **"Found Chrome: chromium 142.0.7444.59..." message**:
+     - This is an **informational message**, not an error
+     - It indicates that Chrome/Chromium was successfully detected on the system
+     - The application will proceed with driver initialization after this message
+     - No action needed if you see this message
 
 2. **Screenshot directory permissions**:
    - Ensure write permissions for `screenshots/` directory
@@ -521,6 +554,7 @@ python test_destination.py
    - Check console logs for detailed error messages
    - Verify Chrome/Chromium is properly installed
    - Check available disk space (screenshots require ~1MB per image)
+   - Review error messages for both `webdriver-manager` and Selenium fallback attempts
 
 4. **Screenshot quality or size issues**:
    - Adjust `--window-size` argument in `screenshot.py` for capture resolution
@@ -531,6 +565,12 @@ python test_destination.py
    - Check scheduler is running (look for "Scheduled job 'take_screenshot'" message)
    - Verify job is executing (check console for screenshot capture messages)
    - Check if old screenshots are being cleaned up properly
+
+6. **Driver initialization troubleshooting**:
+   - The code now validates that ChromeDriverManager returns a valid path (not None)
+   - If `webdriver-manager` fails, the code automatically attempts Selenium's built-in manager
+   - Check console logs for messages indicating which driver manager is being used
+   - Both methods should work if Chrome/Chromium is properly installed
 
 ## Data Extraction Details
 
@@ -596,6 +636,16 @@ Screenshots can be accessed via:
 - **File Size**: Approximately 1.15 MB per screenshot
 - **Browser**: Chrome/Chromium headless mode
 - **Wait Time**: Up to 30 seconds for page load, plus 3 seconds for map tiles
+
+## Recent Changes
+
+### ChromeDriver Initialization Improvements (Latest)
+- **Fixed**: "'nonetype' object has not attribute 'slpit'" error handling
+  - Added validation to ensure ChromeDriverManager returns a valid driver path
+  - Implemented automatic fallback to Selenium's built-in driver manager
+  - Improved error messages for better troubleshooting
+- **Clarified**: "Found Chrome: chromium..." message is informational, not an error
+- **Enhanced**: Error handling now provides detailed messages for both primary and fallback driver initialization methods
 
 ## Future Enhancements
 
