@@ -40,7 +40,7 @@ header h1 {
 }
 
 .controls {
-    padding: 20px 30px;
+    padding: 12px 30px;
     display: flex;
     gap: 15px;
     align-items: center;
@@ -137,12 +137,12 @@ header h1 {
 }
 
 .history-panel {
-    padding: 25px 30px;
+    padding: 20px 30px;
     background: #fff;
 }
 
 .history-panel h2 {
-    margin-bottom: 20px;
+    margin-bottom: 5px;
     color: #333;
     font-size: 1.5em;
 }
