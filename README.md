@@ -1,6 +1,6 @@
 # Ship Tracker - Sagittarius Leader
 
-A web application that scrapes shipnext.com for the destination and location information of the ship "Sagittarius Leader" and displays it on an interactive map with automatic scheduled updates.
+A web application that scrapes shipnext.com for the destination and location information of the ship "Sagittarius Leader" and displays it on an interactive map with automatic scheduled updates. The application also captures hourly screenshots of itself, accessible at `/screenshots/current.png`.
 
 ## Project Overview
 
@@ -10,6 +10,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 - Displaying current location on an interactive map using Leaflet.js
 - Providing REST API endpoints for programmatic access
 - Automatically updating location data every 6 hours via scheduled background tasks
+- **NEW**: Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/current.png`
 
 ## Architecture
 
@@ -19,6 +20,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 - **Scheduler**: APScheduler (BackgroundScheduler) for periodic updates
 - **Web Scraping**: BeautifulSoup4 with requests library
 - **Geocoding**: Geopy (Nominatim) for converting location names to coordinates
+- **Screenshot Automation**: Playwright for capturing application screenshots
 
 ### Frontend
 - **Map Library**: Leaflet.js 1.9.4
@@ -41,13 +43,16 @@ This application tracks the location and destination of the cargo ship "Sagittar
 ├── app.py                    # Flask application (main entry point)
 ├── scraper.py                # Web scraping logic for shipnext.com
 ├── scheduler.py              # Background scheduler for automatic updates
+├── screenshot_util.py        # Screenshot capture utility using Playwright
 ├── requirements.txt          # Python dependencies
 ├── test_destination.py      # Test suite for scraper and database
 ├── ship_locations.db         # SQLite database (created at runtime)
 ├── static/
 │   ├── index.html           # Main HTML page
 │   ├── app.js               # Frontend JavaScript (map, API calls)
-│   └── styles.css           # CSS styling
+│   ├── styles.css           # CSS styling
+│   └── screenshots/
+│       └── current.png      # Latest application screenshot (created at runtime)
 └── README.md                # This file
 ```
 
@@ -62,6 +67,7 @@ Main Flask application that:
   - `GET /api/location` - Returns latest ship location
   - `GET /api/history` - Returns last 30 location entries
   - `POST /api/update` - Manually triggers location update
+  - `GET /screenshots/current.png` - Serves the latest application screenshot
 - Starts background scheduler on application startup
 - Runs on `0.0.0.0:3000` (accessible on all network interfaces)
 
@@ -91,15 +97,29 @@ Web scraping module that extracts ship location data from shipnext.com:
 
 ### scheduler.py
 Background task scheduler using APScheduler:
-- **Schedule**: Updates every 6 hours (interval-based)
+- **Schedule**: 
+  - Ship location updates every 6 hours
+  - Screenshot capture every 1 hour
 - **Initial Update**: Runs immediately when scheduler starts
 - **Singleton Pattern**: Prevents multiple scheduler instances
 - **Functions**:
   - `update_ship_location()` - Calls scraper and saves to database
+  - `update_screenshot()` - Captures application screenshot using Playwright
 - **Thread Safety**: Uses ThreadPoolExecutor with non-daemon threads
 - **Shutdown**: Registered with `atexit` for graceful shutdown
 
 **Important**: Scheduler runs in background thread, separate from Flask's main thread.
+
+### screenshot_util.py
+Screenshot capture utility using Playwright:
+- **Browser**: Chromium (headless mode)
+- **Viewport**: 1920x1080
+- **Output**: Saves to `static/screenshots/current.png` (replaces previous screenshot)
+- **URL**: Screenshot accessible at `/screenshots/current.png`
+- **Functions**:
+  - `take_screenshot(url)` - Captures full-page screenshot of the application
+  - `get_screenshot_path()` - Returns path to current screenshot
+  - `get_screenshot_timestamp()` - Returns last modified timestamp of screenshot
 
 ### static/app.js
 Frontend JavaScript that:
@@ -109,7 +129,7 @@ Frontend JavaScript that:
 - Updates info panel with location details
 - Handles manual updates via button click
 - Fetches and displays location history (clickable to view past locations)
-- Auto-refreshes every 5 minutes
+- Auto-refreshes location data every 5 minutes
 - Shows status messages for user feedback
 
 **Key Functions**:
@@ -140,6 +160,7 @@ CSS styling for the application (not included in file review, but referenced).
 - `lxml==4.9.3` - XML/HTML parser backend
 - `apscheduler==3.10.4` - Background job scheduling
 - `geopy==2.4.1` - Geocoding service (Nominatim)
+- `playwright==1.40.0` - Browser automation for screenshots
 
 ### External Services
 - **shipnext.com** - Source of ship location data
@@ -152,6 +173,11 @@ CSS styling for the application (not included in file review, but referenced).
 1. **Install Python dependencies**:
 ```bash
 pip install -r requirements.txt
+```
+
+2. **Install Playwright browsers** (required for screenshot functionality):
+```bash
+playwright install chromium
 ```
 
 3. **Verify installation**:
@@ -170,11 +196,13 @@ The application will:
 - Initialize the SQLite database (creates `ship_locations.db` if it doesn't exist)
 - Start the background scheduler
 - Run an initial location update
+- Take an initial screenshot after 5 seconds (allows server to start)
 - Start the Flask server on `http://localhost:3000`
 
 ### Access the Application:
 - Web interface: `http://localhost:3000`
 - API endpoint: `http://localhost:3000/api/location`
+- Screenshot: `http://localhost:3000/screenshots/current.png`
 
 **Note**: The Flask server runs with `debug=True` and `use_reloader=False` (reloader disabled to prevent scheduler conflicts).
 
@@ -249,16 +277,32 @@ Manually triggers a location update by scraping shipnext.com.
 }
 ```
 
+### GET /screenshots/current.png
+Serves the latest application screenshot as a PNG image file.
+
+**Response** (200 OK):
+- Returns PNG image file
+- Headers include no-cache directives to ensure latest screenshot is served
+
+**Response** (404 Not Found):
+- File not found if screenshot hasn't been captured yet
+
 ## Configuration
 
 ### Update Schedule
-Modify `scheduler.py` line 70 to change update interval:
+Modify `scheduler.py` to change update intervals:
+- Ship location updates (around line 80):
 ```python
-hours=6,  # Change to desired hours
+hours=6,  # Change to desired hours for location updates
+```
+- Screenshot updates (around line 90):
+```python
+hours=1,  # Change to desired hours for screenshot capture
 ```
 
 ### Auto-refresh Interval
-Modify `static/app.js` line 227 to change frontend refresh interval:
+Modify `static/app.js` to change frontend refresh interval:
+- Location data (around line 228):
 ```javascript
 setInterval(fetchLocation, 5 * 60 * 1000);  // Change milliseconds
 ```
@@ -294,6 +338,14 @@ python test_destination.py
 - Scheduler update function (end-to-end update test)
 
 ## Troubleshooting
+
+### Screenshot Not Accessible
+1. Verify Playwright browsers are installed: Run `playwright install chromium`
+2. Check if screenshot file exists: Look for `static/screenshots/current.png`
+3. Check console for screenshot capture errors
+4. Ensure the Flask server is accessible at `http://localhost:3000`
+5. Wait at least 5 seconds after server start for initial screenshot
+6. Try accessing directly: `http://localhost:3000/screenshots/current.png`
 
 ### No Location Data Displayed
 1. Check if scraper is fetching data: Look for debug messages in console
@@ -346,6 +398,8 @@ The scraper handles various coordinate formats:
 - **Geocoding**: Nominatim has usage limits and may fail for ambiguous locations
 - **Database**: SQLite may not be suitable for high-traffic scenarios
 - **Single Ship**: Currently hardcoded for "Sagittarius Leader" only
+- **Screenshot Storage**: Only one screenshot is kept (previous ones are replaced)
+- **Screenshot Timing**: 5-second delay after server start may not be sufficient for slow systems
 
 ## Future Enhancements
 

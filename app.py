@@ -50,6 +50,17 @@ def static_files(filename):
         response.headers['Cache-Control'] = 'public, max-age=3600'
     return response
 
+# Route to serve screenshots directly at /screenshots/
+@app.route('/screenshots/<path:filename>')
+def screenshots(filename):
+    """Serve screenshot files"""
+    response = send_from_directory('static/screenshots', filename)
+    # No caching for screenshots - always serve the latest
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 @app.route('/api/location')
 def get_location():
     """Get the latest location of Sagittarius Leader"""
