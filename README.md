@@ -10,7 +10,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 - Displaying current location on an interactive map using Leaflet.js
 - Providing REST API endpoints for programmatic access
 - Automatically updating location data every 6 hours via scheduled background tasks
-- **NEW**: Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/current.bmp` (captured at 1280x768, resized to 800x480)
+- **NEW**: Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/current.bmp` (captured at 1440x960, resized to 960x640)
 
 ## Architecture
 
@@ -113,9 +113,9 @@ Background task scheduler using APScheduler:
 ### screenshot_util.py
 Screenshot capture utility using Playwright:
 - **Browser**: Chromium (headless mode)
-- **Viewport**: 1920x1080
+- **Viewport**: 1440x960
 - **Output**: Saves to `static/screenshots/current.bmp` (replaces previous screenshot)
-- **Resolution**: Captured at 1280x768, resized to 800x480, saved as BMP format
+- **Resolution**: Captured at 1440x960, resized to 960x640, saved as BMP format
 - **URL**: Screenshot accessible at `/screenshots/current.bmp`
 - **Functions**:
   - `take_screenshot(url)` - Captures full-page screenshot of the application
@@ -285,10 +285,10 @@ Manually triggers a location update by scraping shipnext.com.
 ```
 
 ### GET /screenshots/current.bmp
-Serves the latest application screenshot as a PNG image file.
+Serves the latest application screenshot as a BMP image file.
 
 **Response** (200 OK):
-- Returns PNG image file
+- Returns BMP image file
 - Headers include no-cache directives to ensure latest screenshot is served
 
 **Response** (404 Not Found):
