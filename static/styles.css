@@ -147,12 +147,41 @@ header h1 {
     font-size: 1.5em;
 }
 
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    padding: 10px;
+    margin: -10px -10px 20px -10px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.history-header:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+}
+
+.collapse-icon {
+    font-size: 0.8em;
+    color: #667eea;
+    transition: transform 0.3s ease;
+}
+
 .history-list {
     display: flex;
     flex-direction: column;
     gap: 10px;
     max-height: 300px;
     overflow-y: auto;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.history-list.collapsed {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
 }
 
 .history-item {
