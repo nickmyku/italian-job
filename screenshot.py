@@ -61,7 +61,7 @@ def take_screenshot():
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
-        chrome_options.add_argument('--window-size=1280,768')
+        chrome_options.add_argument('--window-size=1600,960')
         chrome_options.add_argument('--disable-extensions')
         chrome_options.add_argument('--disable-software-rasterizer')
         
@@ -107,8 +107,8 @@ def take_screenshot():
         # Clean up old screenshots before taking a new one
         cleanup_old_screenshots()
         
-        # Take screenshot at 1280x768 (save as PNG first, then convert to BMP)
-        print(f"[{datetime.now()}] Capturing screenshot at 1280x768...")
+        # Take screenshot at 1600x960 (save as PNG first, then convert to BMP)
+        print(f"[{datetime.now()}] Capturing screenshot at 1600x960...")
         temp_png_path = os.path.join(SCREENSHOTS_DIR, 'temp_screenshot.png')
         driver.save_screenshot(temp_png_path)
         
