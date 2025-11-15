@@ -174,6 +174,7 @@ CSS styling for the application (not included in file review, but referenced).
 1. **Install Linux packages**:
 ```bash
 sudo apt-get install libxml2-dev libxslt-dev
+sudo apt-get install nodejs
 ```
 
 2. **Install Python dependencies**:
