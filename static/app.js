@@ -214,6 +214,21 @@ function showStatus(message, type) {
     }
 }
 
+// Toggle history panel
+function toggleHistory() {
+    const historyList = document.getElementById('historyList');
+    const historyHeader = document.getElementById('historyHeader');
+    const collapseIcon = historyHeader.querySelector('.collapse-icon');
+    
+    historyList.classList.toggle('collapsed');
+    
+    if (historyList.classList.contains('collapsed')) {
+        collapseIcon.textContent = '▼';
+    } else {
+        collapseIcon.textContent = '▲';
+    }
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
@@ -223,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set up event listeners
     document.getElementById('updateBtn').addEventListener('click', manualUpdate);
     document.getElementById('refreshBtn').addEventListener('click', fetchLocation);
+    document.getElementById('historyHeader').addEventListener('click', toggleHistory);
     
     // Auto-refresh every 5 minutes
     setInterval(fetchLocation, 5 * 60 * 1000);
