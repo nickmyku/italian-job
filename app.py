@@ -46,7 +46,7 @@ def static_files(filename):
     """Serve static files"""
     response = send_from_directory('static', filename)
     # Add cache headers for static files
-    if filename.endswith('.js') or filename.endswith('.css'):
+    if filename.endswith('.js') or filename.endswith('.css') or filename.endswith('.ico'):
         response.headers['Cache-Control'] = 'public, max-age=3600'
     return response
 
