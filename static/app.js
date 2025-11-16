@@ -278,8 +278,8 @@ function updateHistoryTrail() {
         const historyMarkerIcon = L.divIcon({
             className: 'history-marker',
             html: '',
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
+            iconSize: [10, 10],
+            iconAnchor: [5, 5]
         });
         
         const historyMarker = L.marker([lat, lon], { 
