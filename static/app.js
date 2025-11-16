@@ -279,7 +279,7 @@ function updateHistoryTrail() {
             className: 'history-marker',
             html: '',
             iconSize: [16, 16],
-            iconAnchor: [4, 4]
+            iconAnchor: [8, 8]
         });
         
         const historyMarker = L.marker([lat, lon], { 
