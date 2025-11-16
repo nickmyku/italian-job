@@ -18,6 +18,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 
 ### Backend (Flask)
 - **Framework**: Flask 3.0.0 with CORS enabled
+- **Rate Limiting**: Flask-Limiter for API protection and rate control
 - **Database**: SQLite (`ship_locations.db`)
 - **Scheduler**: APScheduler (BackgroundScheduler) for periodic updates
 - **Web Scraping**: BeautifulSoup4 with requests library
@@ -65,13 +66,14 @@ This application tracks the location and destination of the cargo ship "Sagittar
 ### app.py
 Main Flask application that:
 - Initializes SQLite database with `ship_locations` table
+- Configures Flask-Limiter for rate limiting API endpoints
 - Serves static files (HTML, CSS, JS)
 - Provides REST API endpoints:
-  - `GET /` - Serves index.html
-  - `GET /api/location` - Returns latest ship location
-  - `GET /api/history` - Returns last 30 location entries
-  - `POST /api/update` - Manually triggers location update
-  - `GET /screenshots/current.bmp` - Serves the latest application screenshot
+  - `GET /` - Serves index.html (no rate limit)
+  - `GET /api/location` - Returns latest ship location (120 req/min)
+  - `GET /api/history` - Returns last 30 location entries (120 req/min)
+  - `POST /api/update` - Manually triggers location update (60 req/min)
+  - `GET /screenshots/current.bmp` - Serves the latest application screenshot (no rate limit)
 - Starts background scheduler on application startup
 - Runs on `0.0.0.0:3000` (accessible on all network interfaces)
 
@@ -176,12 +178,14 @@ CSS styling for the application including:
 ### Python Packages (requirements.txt)
 - `flask==3.0.0` - Web framework
 - `flask-cors==4.0.0` - CORS support for API
+- `flask-limiter==3.5.0` - Rate limiting for API endpoints
 - `requests==2.31.0` - HTTP requests for web scraping
 - `beautifulsoup4==4.12.2` - HTML parsing
-- `lxml==4.9.3` - XML/HTML parser backend
+- `lxml==6.0.2` - XML/HTML parser backend
 - `apscheduler==3.10.4` - Background job scheduling
 - `geopy==2.4.1` - Geocoding service (Nominatim)
-- `playwright==1.40.0` - Browser automation for screenshots
+- `playwright==1.56.0` - Browser automation for screenshots
+- `Pillow==12.0.0` - Image processing for screenshots
 
 ### External Services
 - **shipnext.com** - Source of ship location data
@@ -235,8 +239,12 @@ The application will:
 
 ## API Endpoints
 
+All API endpoints are protected by rate limiting. When limits are exceeded, the server returns HTTP 429 (Too Many Requests) with `X-RateLimit-*` headers indicating the limit, remaining requests, and reset time.
+
 ### GET /api/location
 Returns the latest ship location data.
+
+**Rate Limit**: 120 requests per minute
 
 **Response** (200 OK):
 ```json
@@ -262,6 +270,8 @@ Returns the latest ship location data.
 ### GET /api/history
 Returns the last 30 location entries.
 
+**Rate Limit**: 120 requests per minute
+
 **Response** (200 OK):
 ```json
 {
@@ -281,6 +291,8 @@ Returns the last 30 location entries.
 
 ### POST /api/update
 Manually triggers a location update by scraping shipnext.com.
+
+**Rate Limit**: 60 requests per minute (allows customer updates at least once per minute)
 
 **Response** (200 OK):
 ```json
@@ -306,6 +318,8 @@ Manually triggers a location update by scraping shipnext.com.
 
 ### GET /screenshots/current.bmp
 Serves the latest application screenshot as a BMP image file.
+
+**Rate Limit**: None (exempt from rate limiting)
 
 **Response** (200 OK):
 - Returns BMP image file
@@ -345,6 +359,31 @@ Modify `app.py` line 12 to change database path:
 ```python
 DB_PATH = 'ship_locations.db'  # Change to desired path
 ```
+
+### API Rate Limiting
+Modify `app.py` to adjust rate limits for different endpoints:
+```python
+# Default limit for all endpoints
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per minute"],  # Change as needed
+    storage_uri="memory://",
+    strategy="fixed-window"
+)
+
+# Specific endpoint limits
+@limiter.limit("60 per minute")  # For /api/update endpoint
+@limiter.limit("120 per minute")  # For /api/location and /api/history
+```
+
+**Current Rate Limits**:
+- Default: 200 requests per minute
+- `/api/update`: 60 requests per minute (allows customer updates at least once per minute)
+- `/api/location` and `/api/history`: 120 requests per minute (read operations)
+- Static files and screenshots: Exempt from rate limiting
+
+When rate limits are exceeded, the API returns HTTP 429 (Too Many Requests) with headers indicating the limit and reset time.
 
 ### Geocoding Rate Limiting
 Modify `scraper.py` line 15 to change geocoding delay:
@@ -403,6 +442,15 @@ python test_destination.py
 2. Check if database file is locked (close other database connections)
 3. Verify SQLite3 is installed on system
 
+### Rate Limiting Issues
+1. **HTTP 429 errors**: You've exceeded the rate limit for an endpoint
+   - Wait for the rate limit window to reset (shown in `X-RateLimit-Reset` header)
+   - Reduce request frequency or adjust limits in `app.py`
+2. **Frequent rate limit hits**: Consider increasing limits in the limiter configuration
+3. **Multiple clients behind same IP**: All clients share the same rate limit
+   - Consider using alternative identification methods (e.g., API keys)
+4. **Testing needs**: Temporarily increase limits or use `@limiter.exempt` decorator for specific endpoints
+
 ## Data Extraction Details
 
 The scraper uses multiple fallback strategies to extract location data:
@@ -420,7 +468,8 @@ The scraper handles various coordinate formats:
 
 ## Limitations
 
-- **Rate Limiting**: shipnext.com may rate-limit requests
+- **External Rate Limiting**: shipnext.com may rate-limit requests
+- **API Rate Limits**: Application enforces rate limits to prevent abuse (configurable in app.py)
 - **HTML Structure Changes**: Scraper may break if shipnext.com changes their HTML structure
 - **Geocoding**: Nominatim has usage limits and may fail for ambiguous locations
 - **Database**: SQLite may not be suitable for high-traffic scenarios
@@ -450,6 +499,8 @@ The application now displays a visual trail of the ship's recent movements:
 Potential improvements:
 - Support for multiple ships
 - Database migration to PostgreSQL for production
+- Redis-backed rate limiting for multi-instance deployments
+- API authentication and per-user rate limits
 - Caching layer for API responses
 - Error notification system
 - Export functionality for location data
