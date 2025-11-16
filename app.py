@@ -164,4 +164,4 @@ if __name__ == '__main__':
     # Start scheduler - singleton pattern in scheduler.py prevents multiple instances
     # Disable reloader to prevent scheduler from being killed on code changes
     start_scheduler()
-    app.run(host='0.0.0.0', port=3000, debug=True, use_reloader=False)
+    app.run(host='0.0.0.0', port=3000, debug=False, use_reloader=False)
