@@ -321,11 +321,13 @@ def extract_from_shipnext_search(soup, ship_name):
     
     # Try to find destination port information
     destination_patterns = [
-        r'Destination[:\s]+([^,\n]+)',
-        r'To[:\s]+([^,\n]+)',
-        r'Port[:\s]+([^,\n]+)',
-        r'Heading[:\s]+to[:\s]+([^,\n]+)',
-        r'ETA[:\s]+([^,\n]+)',
+        r'on route to\s+([^\n\r.]+?)(?:\.|Estimated)',  # "on route to City, Country."
+        r'route to\s+([^\n\r.]+?)(?:\.|Estimated)',  # "route to City, Country."
+        r'to\s+([A-Z][a-zA-Z\s,]+?)(?:\.|Estimated)',  # "to City, Country."
+        r'Destination[:\s]+([^\n]+)',
+        r'Port[:\s]+([^\n]+)',
+        r'Heading[:\s]+to[:\s]+([^\n]+)',
+        r'ETA[:\s]+([^\n]+)',
     ]
     
     for pattern in destination_patterns:
@@ -334,7 +336,10 @@ def extract_from_shipnext_search(soup, ship_name):
             location_text = match.group(1).strip()
             # Clean up the location text
             location_text = re.sub(r'\s+', ' ', location_text)
-            location_text = location_text.split(',')[0].strip()  # Take first part if comma-separated
+            # Keep both city and country (typically separated by comma)
+            # Split by comma and keep first two parts (city, country)
+            parts = [p.strip() for p in location_text.split(',')[:2]]
+            location_text = ', '.join(parts) if len(parts) > 1 else parts[0] if parts else location_text
             location_text = location_text.split('\n')[0].strip()  # Take first line
             location_data['location_text'] = location_text
             break
@@ -535,18 +540,21 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
     # This will override HTML element matching if it finds a better match
     if True:  # Always check text patterns to find the best destination
         destination_patterns = [
-            r'Destination[:\s]+([^,\n\r]+)',
-            r'To[:\s]+([^,\n\r]+)',
-            r'Port[:\s]+([^,\n\r]+)',
-            r'Heading[:\s]+to[:\s]+([^,\n\r]+)',
-            r'Next Port[:\s]+([^,\n\r]+)',
-            r'Next Port of Call[:\s]+([^,\n\r]+)',
-            r'Destination Port[:\s]+([^,\n\r]+)',
-            r'Going to[:\s]+([^,\n\r]+)',
-            r'Bound for[:\s]+([^,\n\r]+)',
-            r'Current Port[:\s]+([^,\n\r]+)',
-            r'Location[:\s]+([^,\n\r]+)',
-            r'At[:\s]+([^,\n\r]+)',  # "At: Port Name"
+            r'on route to\s+([^\n\r.]+?)(?:\.|Estimated)',  # "on route to Iquique, Chile."
+            r'route to\s+([^\n\r.]+?)(?:\.|Estimated)',  # "route to Iquique, Chile."
+            r'to\s+([A-Z][a-zA-Z\s,]+?)(?:\.|Estimated)',  # "to Iquique, Chile."
+            r'from\s+[^\.]+?\s+to\s+([^\n\r.]+?)(?:\.|$)',  # "from X to Iquique, Chile."
+            r'Destination[:\s]+([^\n\r]+)',
+            r'Port[:\s]+([^\n\r]+)',
+            r'Heading[:\s]+to[:\s]+([^\n\r]+)',
+            r'Next Port[:\s]+([^\n\r]+)',
+            r'Next Port of Call[:\s]+([^\n\r]+)',
+            r'Destination Port[:\s]+([^\n\r]+)',
+            r'Going to[:\s]+([^\n\r]+)',
+            r'Bound for[:\s]+([^\n\r]+)',
+            r'Current Port[:\s]+([^\n\r]+)',
+            r'Location[:\s]+([^\n\r]+)',
+            r'At[:\s]+([^\n\r]+)',  # "At: Port Name"
         ]
         
         for pattern in destination_patterns:
@@ -557,7 +565,10 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                 location_text = re.sub(r'\s+', ' ', location_text)
                 # Remove common prefixes/suffixes
                 location_text = re.sub(r'^(port|to|at|in|for)\s+', '', location_text, flags=re.I)
-                location_text = location_text.split(',')[0].strip()
+                # Keep both city and country (typically separated by comma)
+                # Split by comma and keep first two parts (city, country)
+                parts = [p.strip() for p in location_text.split(',')[:2]]
+                location_text = ', '.join(parts) if len(parts) > 1 else parts[0] if parts else location_text
                 location_text = location_text.split('\n')[0].strip()
                 location_text = location_text.split('/')[0].strip()  # Sometimes "Port A / Port B"
                 
@@ -604,7 +615,10 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                     location_text = match.group(1).strip()
                     location_text = re.sub(r'\s+', ' ', location_text)
                     location_text = re.sub(r'^(port|to|at|in|for)\s+', '', location_text, flags=re.I)
-                    location_text = location_text.split(',')[0].strip()
+                    # Keep both city and country (typically separated by comma)
+                    # Split by comma and keep first two parts (city, country)
+                    parts = [p.strip() for p in location_text.split(',')[:2]]
+                    location_text = ', '.join(parts) if len(parts) > 1 else parts[0] if parts else location_text
                     location_text = location_text.split('\n')[0].strip()
                     location_text = location_text.split('/')[0].strip()
                     
