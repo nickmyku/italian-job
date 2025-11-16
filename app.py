@@ -1,13 +1,68 @@
-from flask import Flask, jsonify, send_from_directory, url_for
+from flask import Flask, jsonify, send_from_directory, url_for, request, abort
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import sqlite3
 import os
 from datetime import datetime
 from scraper import scrape_ship_location
 from scheduler import start_scheduler
+import re
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
+
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
+# Comprehensive list of bot user agents
+BOT_USER_AGENTS = [
+    r'bot', r'crawl', r'spider', r'scrape', r'slurp', r'baidu', r'yandex',
+    r'duckduck', r'facebook', r'archive', r'semrush', r'ahrefs', r'mj12',
+    r'dotbot', r'petalbot', r'bingpreview', r'google', r'bing', r'yahoo',
+    r'curl', r'wget', r'python-requests', r'scrapy', r'httpx', r'axios',
+    r'go-http-client', r'java/', r'apache-httpclient', r'okhttp',
+    r'pycurl', r'libwww-perl', r'php/', r'ruby', r'nutch', r'ia_archiver',
+    r'masscan', r'nmap', r'zgrab', r'shodan', r'censys', r'zmap'
+]
+
+# Compile bot patterns for performance
+BOT_PATTERN = re.compile('|'.join(BOT_USER_AGENTS), re.IGNORECASE)
+
+def is_bot(user_agent):
+    """Check if the user agent is a bot"""
+    if not user_agent:
+        return True  # Block requests without user agent
+    return bool(BOT_PATTERN.search(user_agent))
+
+@app.before_request
+def block_bots():
+    """Middleware to block bots and crawlers"""
+    # Allow robots.txt
+    if request.path == '/robots.txt':
+        return None
+    
+    user_agent = request.headers.get('User-Agent', '')
+    
+    # Block if no user agent or if it matches bot patterns
+    if is_bot(user_agent):
+        abort(403)  # Forbidden
+    
+    # Block suspicious patterns
+    # Check for common bot behaviors
+    if not user_agent or len(user_agent) < 10:
+        abort(403)
+    
+    # Block if Accept header is missing (most browsers send this)
+    if not request.headers.get('Accept'):
+        abort(403)
+    
+    return None
 
 DB_PATH = 'ship_locations.db'
 
@@ -30,7 +85,13 @@ def init_db():
     conn.commit()
     conn.close()
 
+@app.route('/robots.txt')
+def robots():
+    """Serve robots.txt file"""
+    return send_from_directory('static', 'robots.txt')
+
 @app.route('/')
+@limiter.limit("30 per minute")
 def index():
     """Serve the main HTML page"""
     response = send_from_directory('static', 'index.html')
@@ -62,6 +123,7 @@ def screenshots(filename):
     return response
 
 @app.route('/api/location')
+@limiter.limit("20 per minute")
 def get_location():
     """Get the latest location of Sagittarius Leader"""
     conn = sqlite3.connect(DB_PATH)
@@ -94,6 +156,7 @@ def get_location():
         }), 404
 
 @app.route('/api/history')
+@limiter.limit("20 per minute")
 def get_history():
     """Get location history"""
     conn = sqlite3.connect(DB_PATH)
@@ -123,6 +186,7 @@ def get_history():
     return jsonify({'history': history})
 
 @app.route('/api/update', methods=['POST'])
+@limiter.limit("5 per minute")
 def manual_update():
     """Manually trigger an update"""
     try:
