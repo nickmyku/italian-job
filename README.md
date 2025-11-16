@@ -8,9 +8,11 @@ This application tracks the location and destination of the cargo ship "Sagittar
 - Scraping real-time data from shipnext.com (vessel page: `https://shipnext.com/vessel/9283887-sagittarius-leader`)
 - Storing location history in a SQLite database
 - Displaying current location on an interactive map using Leaflet.js
+- **NEW**: Visualizing the last 20 historical locations as a trail on the map with lines connecting to the current position
+- Providing a toggle control to show/hide the history trail
 - Providing REST API endpoints for programmatic access
 - Automatically updating location data every 6 hours via scheduled background tasks
-- **NEW**: Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/current.bmp` (captured at 1440x960, resized to 960x640)
+- Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/current.bmp` (captured at 1440x960, resized to 960x640)
 
 ## Architecture
 
@@ -27,6 +29,8 @@ This application tracks the location and destination of the cargo ship "Sagittar
 - **Map Tiles**: CartoDB Positron (minimalist light style, similar to Toner Lite)
 - **Auto-refresh**: Frontend polls API every 5 minutes
 - **UI**: Single-page application with info panel, map, and history sidebar
+- **History Trail**: Visual display of last 20 locations as black dots with connecting lines to current position
+- **Interactive Controls**: Toggle button to show/hide history trail on map
 
 ### Data Flow
 1. Scheduler triggers update every 6 hours (also runs on startup)
@@ -130,6 +134,9 @@ Frontend JavaScript that:
 - Updates info panel with location details
 - Handles manual updates via button click
 - Fetches and displays location history (clickable to view past locations)
+- **Renders last 20 historical locations as small black dots on the map**
+- **Draws dashed lines connecting each historical location to the current position**
+- **Provides toggle control to show/hide the history trail**
 - Auto-refreshes location data every 5 minutes
 - Shows status messages for user feedback
 
@@ -139,17 +146,30 @@ Frontend JavaScript that:
 - `fetchLocation()` - GET request to `/api/location`
 - `manualUpdate()` - POST request to `/api/update`
 - `fetchHistory()` - GET request to `/api/history`
+- `updateHistoryTrail()` - Draws last 20 locations as dots with lines to current position
+- `clearHistoryTrail()` - Removes all history markers and lines from map
+- `toggleHistoryTrail()` - Shows/hides history trail based on toggle state
 
 ### static/index.html
 HTML structure with:
 - Info panel showing: Last Updated, Destination, Speed, Heading, Coordinates
 - Map container (`<div id="map">`)
-- History panel with clickable location entries
+- History panel with clickable location entries (collapsible)
 - Control buttons: "Get Current Location" and "Center Map"
+- **Toggle control: Checkbox to show/hide history trail on map (checked by default)**
 - Status message area
 
 ### static/styles.css
-CSS styling for the application (not included in file review, but referenced).
+CSS styling for the application including:
+- Modern gradient design with purple/blue theme
+- Responsive layout with flexbox
+- Custom ship marker with floating animation
+- History panel with collapsible functionality
+- **Toggle control styling with hover effects**
+- **History marker styling (small black dots with white borders)**
+- **History line styling (dashed black lines with reduced opacity)**
+- Status message indicators (success, error, loading)
+- Button hover effects and transitions
 
 ## Dependencies
 
@@ -408,6 +428,23 @@ The scraper handles various coordinate formats:
 - **Screenshot Storage**: Only one screenshot is kept (previous ones are replaced)
 - **Screenshot Timing**: 5-second delay after server start may not be sufficient for slow systems
 
+## Features
+
+### History Trail Visualization
+The application now displays a visual trail of the ship's recent movements:
+- **Last 20 Locations**: Shows the most recent 20 historical positions on the map
+- **Black Dot Markers**: Each historical location is represented by a small black dot (8x8 pixels) with a white border
+- **Connecting Lines**: Dashed black lines connect each historical position to the current ship location
+- **Toggle Control**: Users can show/hide the entire history trail using a checkbox in the controls panel
+- **Auto-Update**: The trail automatically updates when new location data is fetched
+- **Visual Clarity**: Lines are semi-transparent (30% opacity) to avoid cluttering the map
+
+**How to Use**:
+1. The history trail is visible by default when you load the page
+2. Click the "Show History Trail" checkbox in the controls panel to hide/show the trail
+3. The trail updates automatically every 5 minutes or when you click "Get Current Location"
+4. Historical locations in the sidebar are still clickable to view past positions
+
 ## Future Enhancements
 
 Potential improvements:
@@ -415,10 +452,11 @@ Potential improvements:
 - Database migration to PostgreSQL for production
 - Caching layer for API responses
 - Error notification system
-- Historical data visualization (route plotting)
 - Export functionality for location data
 - Docker containerization
 - Environment-based configuration
+- Animated route playback feature
+- Customizable trail length and styling
 
 ## License
 
