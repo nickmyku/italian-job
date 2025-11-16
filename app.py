@@ -40,6 +40,13 @@ def index():
     response.headers['Expires'] = '0'
     return response
 
+@app.route('/robots.txt')
+def robots_txt():
+    """Serve the robots.txt file to block bots"""
+    response = send_from_directory('.', 'robots.txt')
+    response.headers['Content-Type'] = 'text/plain'
+    return response
+
 # Explicit routes for static files to ensure they're served correctly
 @app.route('/static/<path:filename>')
 def static_files(filename):
