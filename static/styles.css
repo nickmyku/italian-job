@@ -254,14 +254,14 @@ header h1 {
 
 .history-marker {
     background: #000 !important;
-    border: 2px solid #fff !important;
+    border: 0px solid #fff !important;
     border-radius: 50% !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
 }
 
 .history-line {
     stroke: #000;
-    stroke-width: 2;
+    stroke-width: 4;
     stroke-dasharray: 5, 5;
     opacity: 0.6;
 }
