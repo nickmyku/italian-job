@@ -1,5 +1,7 @@
 from flask import Flask, jsonify, send_from_directory, url_for
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import sqlite3
 import os
 from datetime import datetime
@@ -8,6 +10,17 @@ from scheduler import start_scheduler
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
+
+# Configure Flask-Limiter
+# Default: 200 requests per minute for general API usage
+# Storage: in-memory (suitable for single-instance deployments)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per minute"],
+    storage_uri="memory://",
+    strategy="fixed-window"
+)
 
 DB_PATH = 'ship_locations.db'
 
@@ -31,6 +44,7 @@ def init_db():
     conn.close()
 
 @app.route('/')
+@limiter.exempt  # No rate limiting on static pages
 def index():
     """Serve the main HTML page"""
     response = send_from_directory('static', 'index.html')
@@ -41,6 +55,7 @@ def index():
     return response
 
 @app.route('/robots.txt')
+@limiter.exempt  # No rate limiting on robots.txt
 def robots_txt():
     """Serve the robots.txt file to block bots"""
     response = send_from_directory('.', 'robots.txt')
@@ -49,6 +64,7 @@ def robots_txt():
 
 # Explicit routes for static files to ensure they're served correctly
 @app.route('/static/<path:filename>')
+@limiter.exempt  # No rate limiting on static files
 def static_files(filename):
     """Serve static files"""
     response = send_from_directory('static', filename)
@@ -59,6 +75,7 @@ def static_files(filename):
 
 # Route to serve screenshots directly at /screenshots/
 @app.route('/screenshots/<path:filename>')
+@limiter.exempt  # No rate limiting on screenshots
 def screenshots(filename):
     """Serve screenshot files"""
     response = send_from_directory('static/screenshots', filename)
@@ -69,6 +86,7 @@ def screenshots(filename):
     return response
 
 @app.route('/api/location')
+@limiter.limit("120 per minute")  # Higher limit for read operations
 def get_location():
     """Get the latest location of Sagittarius Leader"""
     conn = sqlite3.connect(DB_PATH)
@@ -101,6 +119,7 @@ def get_location():
         }), 404
 
 @app.route('/api/history')
+@limiter.limit("120 per minute")  # Higher limit for read operations
 def get_history():
     """Get location history"""
     conn = sqlite3.connect(DB_PATH)
@@ -130,6 +149,7 @@ def get_history():
     return jsonify({'history': history})
 
 @app.route('/api/update', methods=['POST'])
+@limiter.limit("60 per minute")  # Allow at least once per minute updates
 def manual_update():
     """Manually trigger an update"""
     try:
