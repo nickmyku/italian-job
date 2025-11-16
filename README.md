@@ -178,10 +178,11 @@ CSS styling for the application including:
 - `flask-cors==4.0.0` - CORS support for API
 - `requests==2.31.0` - HTTP requests for web scraping
 - `beautifulsoup4==4.12.2` - HTML parsing
-- `lxml==4.9.3` - XML/HTML parser backend
+- `lxml==4.9.3` - XML/HTML parser backend (lxml==6.0.2 required for linux 64-bit)
 - `apscheduler==3.10.4` - Background job scheduling
 - `geopy==2.4.1` - Geocoding service (Nominatim)
-- `playwright==1.40.0` - Browser automation for screenshots
+- `playwright==1.40.0` - Browser automation for screenshots (playwright==1.56.0 required for linux 64-bit)
+- `pillow==10.1.0` - Image resizing library for screenshots (Pillow==12.0.0 required for linux 64-bit)
 
 ### External Services
 - **shipnext.com** - Source of ship location data
@@ -191,32 +192,40 @@ CSS styling for the application including:
 
 ## Installation
 
-1. **Install Linux packages**:
+1.a. **Install Linux packages**:
 ```bash
 sudo apt-get install libxml2-dev libxslt-dev
 sudo apt-get install nodejs
 ```
 
-2. **Install Python dependencies**:
+1.b **Install Mac packages** (must be run within the applications working directory):
 ```bash
-pip install -r requirements.txt
+brew update
+brew install node
+npm init playwright@latest
+npx playwright install chromium
 ```
 
-3. **Install Playwright browsers** (required for screenshot functionality):
+2. **Install Python dependencies**:
+```bash
+pip3 install -r requirements.txt
+```
+
+3. **Install Playwright browsers** (LINUX ONLY - required for screenshot functionality):
 ```bash
 playwright install chromium
 ```
 
 4. **Verify installation**:
 ```bash
-python test_destination.py
+python3 test_destination.py
 ```
 
 ## Running the Application
 
 ### Start the Flask server:
 ```bash
-python app.py
+python3 app.py
 ```
 
 The application will:
