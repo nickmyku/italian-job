@@ -278,7 +278,7 @@ function updateHistoryTrail() {
         const historyMarkerIcon = L.divIcon({
             className: 'history-marker',
             html: '',
-            iconSize: [8, 8],
+            iconSize: [16, 16],
             iconAnchor: [4, 4]
         });
         
@@ -304,9 +304,9 @@ function updateHistoryTrail() {
              [toLocation.latitude, toLocation.longitude]],
             {
                 color: '#000',
-                weight: 2,
-                opacity: 0.6,
-                dashArray: '5, 5'
+                weight: 3,
+                opacity: 0.8,
+                dashArray: '10, 10'
             }
         ).addTo(map);
         
