@@ -46,6 +46,7 @@ header h1 {
     align-items: center;
     background: #fff;
     border-top: 1px solid #e9ecef;
+    flex-wrap: wrap;
 }
 
 .btn-primary, .btn-secondary {
@@ -228,4 +229,39 @@ header h1 {
     50% {
         transform: translateY(-5px);
     }
+}
+
+.toggle-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #333;
+    user-select: none;
+}
+
+.toggle-control input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+.toggle-control:hover {
+    color: #667eea;
+}
+
+.history-marker {
+    background: #000 !important;
+    border: 2px solid #fff !important;
+    border-radius: 50% !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.history-line {
+    stroke: #000;
+    stroke-width: 2;
+    stroke-dasharray: 5, 5;
+    opacity: 0.6;
 }

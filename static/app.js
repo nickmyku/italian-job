@@ -2,6 +2,9 @@
 let map;
 let marker;
 let shipMarker;
+let historyMarkers = [];
+let historyLines = [];
+let historyData = [];
 
 // Default coordinates (will be updated when data loads)
 const defaultCoords = [0, 0];
@@ -97,6 +100,11 @@ function updateMap(locationData) {
     
     // Update info panel
     updateInfoPanel(locationData);
+    
+    // Update history trail if it exists
+    if (historyData.length > 0) {
+        updateHistoryTrail();
+    }
 }
 
 // Update info panel
@@ -171,6 +179,9 @@ async function fetchHistory() {
         historyList.innerHTML = '';
         
         if (data.history && data.history.length > 0) {
+            // Store history data globally
+            historyData = data.history;
+            
             data.history.forEach(item => {
                 const historyItem = document.createElement('div');
                 historyItem.className = 'history-item';
@@ -192,8 +203,12 @@ async function fetchHistory() {
                 
                 historyList.appendChild(historyItem);
             });
+            
+            // Update history trail on map
+            updateHistoryTrail();
         } else {
             historyList.innerHTML = '<p style="text-align: center; color: #6c757d;">No history available</p>';
+            historyData = [];
         }
     } catch (error) {
         console.error('Error fetching history:', error);
@@ -211,6 +226,93 @@ function showStatus(message, type) {
             statusEl.textContent = '';
             statusEl.className = 'status';
         }, 5000);
+    }
+}
+
+// Clear history trail from map
+function clearHistoryTrail() {
+    // Remove all history markers
+    historyMarkers.forEach(marker => {
+        map.removeLayer(marker);
+    });
+    historyMarkers = [];
+    
+    // Remove all history lines
+    historyLines.forEach(line => {
+        map.removeLayer(line);
+    });
+    historyLines = [];
+}
+
+// Update history trail on map
+function updateHistoryTrail() {
+    // Clear existing trail
+    clearHistoryTrail();
+    
+    // Check if toggle is enabled
+    const toggleCheckbox = document.getElementById('historyTrailToggle');
+    if (!toggleCheckbox || !toggleCheckbox.checked) {
+        return;
+    }
+    
+    // Get current location (first item in history)
+    if (!historyData || historyData.length === 0) {
+        return;
+    }
+    
+    const currentLocation = historyData[0];
+    if (!currentLocation.latitude || !currentLocation.longitude) {
+        return;
+    }
+    
+    // Get last 20 locations (excluding the current one at index 0)
+    const last20Locations = historyData.slice(1, 21).filter(item => 
+        item.latitude && item.longitude
+    );
+    
+    // Draw lines and markers for each historical location
+    last20Locations.forEach((item, index) => {
+        const lat = item.latitude;
+        const lon = item.longitude;
+        
+        // Create a small black dot marker
+        const historyMarkerIcon = L.divIcon({
+            className: 'history-marker',
+            html: '',
+            iconSize: [8, 8],
+            iconAnchor: [4, 4]
+        });
+        
+        const historyMarker = L.marker([lat, lon], { 
+            icon: historyMarkerIcon,
+            zIndexOffset: -1000
+        }).addTo(map);
+        
+        historyMarkers.push(historyMarker);
+        
+        // Draw line from this location to current location
+        const line = L.polyline(
+            [[lat, lon], [currentLocation.latitude, currentLocation.longitude]],
+            {
+                color: '#000',
+                weight: 1,
+                opacity: 0.3,
+                dashArray: '5, 5'
+            }
+        ).addTo(map);
+        
+        historyLines.push(line);
+    });
+}
+
+// Toggle history trail visibility
+function toggleHistoryTrail() {
+    const isChecked = document.getElementById('historyTrailToggle').checked;
+    
+    if (isChecked) {
+        updateHistoryTrail();
+    } else {
+        clearHistoryTrail();
     }
 }
 
@@ -239,6 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('updateBtn').addEventListener('click', manualUpdate);
     document.getElementById('refreshBtn').addEventListener('click', fetchLocation);
     document.getElementById('historyHeader').addEventListener('click', toggleHistory);
+    document.getElementById('historyTrailToggle').addEventListener('change', toggleHistoryTrail);
     
     // Auto-refresh every 5 minutes
     setInterval(fetchLocation, 5 * 60 * 1000);
