@@ -255,22 +255,21 @@ function updateHistoryTrail() {
         return;
     }
     
-    // Get current location (first item in history)
+    // Get locations with valid coordinates
     if (!historyData || historyData.length === 0) {
         return;
     }
     
-    const currentLocation = historyData[0];
-    if (!currentLocation.latitude || !currentLocation.longitude) {
-        return;
-    }
-    
-    // Get last 20 locations (excluding the current one at index 0)
-    const last20Locations = historyData.slice(1, 21).filter(item => 
+    // Get last 20 locations (most recent 20)
+    const last20Locations = historyData.slice(0, 21).filter(item => 
         item.latitude && item.longitude
     );
     
-    // Draw lines and markers for each historical location
+    if (last20Locations.length === 0) {
+        return;
+    }
+    
+    // Draw markers for each historical location
     last20Locations.forEach((item, index) => {
         const lat = item.latitude;
         const lon = item.longitude;
@@ -289,10 +288,20 @@ function updateHistoryTrail() {
         }).addTo(map);
         
         historyMarkers.push(historyMarker);
+    });
+    
+    // Draw lines connecting consecutive locations (from oldest to newest)
+    // Note: historyData is ordered from newest to oldest, so we reverse for the trail
+    const reversedLocations = [...last20Locations].reverse();
+    
+    for (let i = 0; i < reversedLocations.length - 1; i++) {
+        const fromLocation = reversedLocations[i];
+        const toLocation = reversedLocations[i + 1];
         
-        // Draw line from this location to current location
+        // Draw line from older location to newer location
         const line = L.polyline(
-            [[lat, lon], [currentLocation.latitude, currentLocation.longitude]],
+            [[fromLocation.latitude, fromLocation.longitude], 
+             [toLocation.latitude, toLocation.longitude]],
             {
                 color: '#000',
                 weight: 1,
@@ -302,7 +311,7 @@ function updateHistoryTrail() {
         ).addTo(map);
         
         historyLines.push(line);
-    });
+    }
 }
 
 // Toggle history trail visibility
