@@ -49,6 +49,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 ├── scraper.py                # Web scraping logic for shipnext.com
 ├── scheduler.py              # Background scheduler for automatic updates
 ├── screenshot_util.py        # Screenshot capture utility using Playwright
+├── gunicorn.conf.py          # Gunicorn production server configuration
 ├── requirements.txt          # Python dependencies
 ├── test_destination.py      # Test suite for scraper and database
 ├── ship_locations.db         # SQLite database (created at runtime)
@@ -186,6 +187,7 @@ CSS styling for the application including:
 - `geopy==2.4.1` - Geocoding service (Nominatim)
 - `playwright==1.56.0` - Browser automation for screenshots
 - `Pillow==12.0.0` - Image processing for screenshots
+- `gunicorn==21.2.0` - WSGI HTTP server for production deployment
 
 ### External Services
 - **shipnext.com** - Source of ship location data
@@ -218,7 +220,12 @@ python test_destination.py
 
 ## Running the Application
 
-### Start the Flask server:
+### Production (Gunicorn - Recommended):
+```bash
+gunicorn -c gunicorn.conf.py app:app
+```
+
+### Development (Flask development server):
 ```bash
 python app.py
 ```
@@ -228,14 +235,17 @@ The application will:
 - Start the background scheduler
 - Run an initial location update
 - Take an initial screenshot after 5 seconds (allows server to start)
-- Start the Flask server on `http://localhost:3000`
+- Start the server on `http://localhost:3000`
 
 ### Access the Application:
 - Web interface: `http://localhost:3000`
 - API endpoint: `http://localhost:3000/api/location`
 - Screenshot: `http://localhost:3000/screenshots/current.bmp`
 
-**Note**: The Flask server runs with `debug=True` and `use_reloader=False` (reloader disabled to prevent scheduler conflicts).
+**Note**: 
+- For production, always use Gunicorn with the provided configuration
+- The Gunicorn configuration uses 1 worker to prevent multiple scheduler instances
+- For development only, you can run with `python app.py` (not recommended for production)
 
 ## API Endpoints
 
@@ -329,6 +339,27 @@ Serves the latest application screenshot as a BMP image file.
 - File not found if screenshot hasn't been captured yet
 
 ## Configuration
+
+### Gunicorn Settings
+Modify `gunicorn.conf.py` to change server configuration:
+- **Workers**: Set to 1 to prevent multiple scheduler instances (critical!)
+```python
+workers = 1  # Do not increase - causes multiple schedulers
+```
+- **Bind address**: Change host and port
+```python
+bind = "0.0.0.0:3000"  # Change to desired host:port
+```
+- **Timeout**: Adjust request timeout
+```python
+timeout = 30  # Seconds
+```
+- **Logging**: Configure log levels and output
+```python
+loglevel = "info"  # Options: debug, info, warning, error, critical
+```
+
+**Important**: Always use exactly 1 worker to prevent multiple scheduler instances from running simultaneously, which would cause duplicate updates.
 
 ### Update Schedule
 Modify `scheduler.py` to change update intervals:

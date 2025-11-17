@@ -178,10 +178,10 @@ def manual_update():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# Initialize database and scheduler when app loads (works with both Gunicorn and direct run)
+init_db()
+start_scheduler()
+
 if __name__ == '__main__':
-    init_db()
-    
-    # Start scheduler - singleton pattern in scheduler.py prevents multiple instances
-    # Disable reloader to prevent scheduler from being killed on code changes
-    start_scheduler()
+    # Only used when running directly with Python (not recommended for production)
     app.run(host='0.0.0.0', port=3000, debug=False, use_reloader=False)
