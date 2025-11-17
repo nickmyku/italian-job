@@ -43,6 +43,11 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Initialize database and start scheduler when module is imported
+# This ensures proper initialization for both Gunicorn and development server
+init_db()
+start_scheduler()
+
 @app.route('/')
 @limiter.exempt  # No rate limiting on static pages
 def index():
@@ -179,9 +184,6 @@ def manual_update():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 if __name__ == '__main__':
-    init_db()
-    
-    # Start scheduler - singleton pattern in scheduler.py prevents multiple instances
-    # Disable reloader to prevent scheduler from being killed on code changes
-    start_scheduler()
+    # Development mode: run Flask's development server
+    # Note: init_db() and start_scheduler() are already called at module level
     app.run(host='0.0.0.0', port=3000, debug=False, use_reloader=False)

@@ -18,6 +18,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 
 ### Backend (Flask)
 - **Framework**: Flask 3.0.0 with CORS enabled
+- **WSGI Server**: Gunicorn for production deployments
 - **Rate Limiting**: Flask-Limiter for API protection and rate control
 - **Database**: SQLite (`ship_locations.db`)
 - **Scheduler**: APScheduler (BackgroundScheduler) for periodic updates
@@ -46,6 +47,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 ```
 /workspace/
 ├── app.py                    # Flask application (main entry point)
+├── gunicorn_config.py        # Gunicorn configuration for production
 ├── scraper.py                # Web scraping logic for shipnext.com
 ├── scheduler.py              # Background scheduler for automatic updates
 ├── screenshot_util.py        # Screenshot capture utility using Playwright
@@ -177,6 +179,7 @@ CSS styling for the application including:
 
 ### Python Packages (requirements.txt)
 - `flask==3.0.0` - Web framework
+- `gunicorn==21.2.0` - WSGI HTTP server for production
 - `flask-cors==4.0.0` - CORS support for API
 - `flask-limiter==3.5.0` - Rate limiting for API endpoints
 - `requests==2.31.0` - HTTP requests for web scraping
@@ -218,7 +221,30 @@ python test_destination.py
 
 ## Running the Application
 
-### Start the Flask server:
+### Production Mode (Recommended - Gunicorn):
+
+For production deployments, use Gunicorn:
+
+```bash
+gunicorn -c gunicorn_config.py app:app
+```
+
+Or with custom options:
+
+```bash
+gunicorn --bind 0.0.0.0:3000 --workers 4 --preload app:app
+```
+
+**Gunicorn Configuration**:
+- Uses `gunicorn_config.py` for production settings
+- `--preload` ensures scheduler starts only once in master process
+- Worker count is automatically calculated (CPU cores * 2 + 1)
+- Logs to stdout/stderr for easy containerization
+
+### Development Mode (Flask Development Server):
+
+For development and testing:
+
 ```bash
 python app.py
 ```
@@ -228,14 +254,16 @@ The application will:
 - Start the background scheduler
 - Run an initial location update
 - Take an initial screenshot after 5 seconds (allows server to start)
-- Start the Flask server on `http://localhost:3000`
+- Start the Flask development server on `http://localhost:3000`
 
 ### Access the Application:
 - Web interface: `http://localhost:3000`
 - API endpoint: `http://localhost:3000/api/location`
 - Screenshot: `http://localhost:3000/screenshots/current.bmp`
 
-**Note**: The Flask server runs with `debug=True` and `use_reloader=False` (reloader disabled to prevent scheduler conflicts).
+**Note**: 
+- Development server runs with `debug=False` and `use_reloader=False` (reloader disabled to prevent scheduler conflicts)
+- For production, always use Gunicorn for better performance and reliability
 
 ## API Endpoints
 
