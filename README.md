@@ -232,12 +232,6 @@ python test_destination.py
 For production deployments, use Gunicorn: (always use 1 worker option to avoid issues with the scheduler)
 
 ```bash
-gunicorn -c gunicorn_config.py --workers 1 app:app
-```
-
-Or with custom options:
-
-```bash
 gunicorn --bind 0.0.0.0:3000 --workers 1 --preload app:app
 ```
 
@@ -294,7 +288,7 @@ Then set environment variables and start Gunicorn:
 export SSL_CERTFILE=ssl/cert.pem
 export SSL_KEYFILE=ssl/key.pem
 export SSL_PORT=3000
-gunicorn -c gunicorn_config.py --workers 1 app:app
+gunicorn --bind 0.0.0.0:3000 --workers 1 --preload app:app
 ```
 
 Access the application at: `https://localhost:3000`
