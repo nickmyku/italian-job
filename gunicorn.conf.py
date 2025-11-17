@@ -6,7 +6,10 @@ bind = "0.0.0.0:3000"
 backlog = 2048
 
 # Worker processes
-workers = 1  # Use only 1 worker to prevent multiple scheduler instances
+# Option 1: Use 1 worker (scheduler runs in the web worker)
+workers = 1  # Set to 1 if running scheduler in app.py
+# Option 2: Use multiple workers (requires running worker.py separately)
+# workers = multiprocessing.cpu_count() * 2 + 1  # Uncomment for multi-worker setup
 worker_class = "sync"
 worker_connections = 1000
 timeout = 30

@@ -45,7 +45,9 @@ This application tracks the location and destination of the cargo ship "Sagittar
 
 ```
 /workspace/
-├── app.py                    # Flask application (main entry point)
+├── app.py                    # Flask application with scheduler (single-worker mode)
+├── app_no_scheduler.py       # Flask application without scheduler (multi-worker mode)
+├── worker.py                 # Standalone scheduler worker (for multi-worker mode)
 ├── scraper.py                # Web scraping logic for shipnext.com
 ├── scheduler.py              # Background scheduler for automatic updates
 ├── screenshot_util.py        # Screenshot capture utility using Playwright
@@ -65,10 +67,18 @@ This application tracks the location and destination of the cargo ship "Sagittar
 ## Component Descriptions
 
 ### app.py
-Main Flask application that:
+Main Flask application (single-worker mode) that:
 - Initializes SQLite database with `ship_locations` table
+- Starts background scheduler for automatic updates
 - Configures Flask-Limiter for rate limiting API endpoints
 - Serves static files (HTML, CSS, JS)
+- Provides REST API endpoints:
+
+### app_no_scheduler.py
+Alternative Flask application (multi-worker mode) that:
+- Same as app.py but does NOT start the scheduler
+- Use this with worker.py running separately
+- Allows multiple Gunicorn workers for better scalability
 - Provides REST API endpoints:
   - `GET /` - Serves index.html (no rate limit)
   - `GET /api/location` - Returns latest ship location (120 req/min)
@@ -116,6 +126,17 @@ Background task scheduler using APScheduler:
 - **Shutdown**: Registered with `atexit` for graceful shutdown
 
 **Important**: Scheduler runs in background thread, separate from Flask's main thread.
+
+### worker.py
+Standalone scheduler worker process:
+- Runs the scheduler independently from web workers
+- Use this for multi-worker Gunicorn setups
+- Prevents duplicate scheduler instances across workers
+- Must be run as a separate background process:
+  ```bash
+  python3 worker.py &
+  ```
+- Handles the same scheduled tasks as scheduler.py
 
 ### screenshot_util.py
 Screenshot capture utility using Playwright:
@@ -220,10 +241,38 @@ python test_destination.py
 
 ## Running the Application
 
-### Production (Gunicorn - Recommended):
+### Setup Option 1: Single Worker (Simpler, Current Setup)
+**Best for:** Low-medium traffic, simple deployment
+
 ```bash
+# Start Gunicorn with scheduler running in the web worker
 gunicorn -c gunicorn.conf.py app:app
 ```
+
+### Setup Option 2: Multi-Worker (Better for High Traffic)
+**Best for:** High traffic, better resource utilization, scalability
+
+```bash
+# 1. Modify gunicorn.conf.py: uncomment the multi-worker line
+# 2. Use app_no_scheduler.py instead of app.py
+# 3. Run scheduler in separate process:
+python3 worker.py &
+
+# 4. Run Gunicorn with multiple workers:
+gunicorn -c gunicorn.conf.py app_no_scheduler:app
+```
+
+**Why separate processes?** Each Gunicorn worker is a separate process with its own memory. The scheduler singleton check only works within one process, so multiple workers would each run their own scheduler, causing duplicate updates.
+
+| Feature | Single Worker (app.py) | Multi-Worker (app_no_scheduler.py + worker.py) |
+|---------|----------------------|----------------------------------------------|
+| **Workers** | 1 Gunicorn worker | Multiple Gunicorn workers |
+| **Scheduler** | Runs in web worker | Runs in separate process |
+| **Traffic Capacity** | Low-Medium | High |
+| **Setup Complexity** | Simple (1 command) | Moderate (2 processes) |
+| **Resource Usage** | Lower | Higher (more workers) |
+| **Scalability** | Limited | Better |
+| **Best For** | Simple deployments, low traffic | Production, high traffic |
 
 ### Development (Flask development server):
 ```bash
@@ -232,7 +281,7 @@ python app.py
 
 The application will:
 - Initialize the SQLite database (creates `ship_locations.db` if it doesn't exist)
-- Start the background scheduler
+- Start the background scheduler (Option 1) or rely on worker.py (Option 2)
 - Run an initial location update
 - Take an initial screenshot after 5 seconds (allows server to start)
 - Start the server on `http://localhost:3000`
@@ -242,9 +291,9 @@ The application will:
 - API endpoint: `http://localhost:3000/api/location`
 - Screenshot: `http://localhost:3000/screenshots/current.bmp`
 
-**Note**: 
-- For production, always use Gunicorn with the provided configuration
-- The Gunicorn configuration uses 1 worker to prevent multiple scheduler instances
+**Notes**: 
+- **Option 1** is simpler but limited to 1 worker (scheduler runs in web worker)
+- **Option 2** scales better but requires running worker.py separately
 - For development only, you can run with `python app.py` (not recommended for production)
 
 ## API Endpoints
