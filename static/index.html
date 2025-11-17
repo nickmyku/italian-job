@@ -50,7 +50,32 @@
                 <input type="checkbox" id="historyTrailToggle" checked>
                 <span>Show History Trail</span>
             </label>
+            <div class="auth-status">
+                <span id="authUsername" class="auth-username"></span>
+                <button id="loginBtn" class="btn-auth">Login</button>
+                <button id="logoutBtn" class="btn-auth" style="display: none;">Logout</button>
+            </div>
             <div id="status" class="status"></div>
+        </div>
+    </div>
+    
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn-submit">Login</button>
+                <div id="loginError" class="error-message"></div>
+            </form>
         </div>
     </div>
     

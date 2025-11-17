@@ -5,6 +5,7 @@ let shipMarker;
 let historyMarkers = [];
 let historyLines = [];
 let historyData = [];
+let isAuthenticated = false;
 
 // Default coordinates (will be updated when data loads)
 const defaultCoords = [0, 0];
@@ -151,8 +152,16 @@ async function manualUpdate() {
     try {
         showStatus('Updating destination...', 'loading');
         const response = await fetch('/api/update', {
-            method: 'POST'
+            method: 'POST',
+            credentials: 'include'
         });
+        
+        if (response.status === 401) {
+            showStatus('Authentication required. Please login.', 'error');
+            openLoginModal();
+            return;
+        }
+        
         const data = await response.json();
         
         if (data.success) {
@@ -340,17 +349,137 @@ function toggleHistory() {
     }
 }
 
+// Check authentication status
+async function checkAuth() {
+    try {
+        const response = await fetch('/api/check-auth', {
+            credentials: 'include'
+        });
+        const data = await response.json();
+        
+        isAuthenticated = data.authenticated;
+        updateAuthUI(data.authenticated, data.username);
+    } catch (error) {
+        console.error('Error checking auth:', error);
+        updateAuthUI(false, null);
+    }
+}
+
+// Update authentication UI
+function updateAuthUI(authenticated, username) {
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const authUsername = document.getElementById('authUsername');
+    
+    if (authenticated && username) {
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'inline-block';
+        authUsername.textContent = `Logged in as: ${username}`;
+        authUsername.style.display = 'inline';
+    } else {
+        loginBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
+        authUsername.textContent = '';
+        authUsername.style.display = 'none';
+    }
+}
+
+// Open login modal
+function openLoginModal() {
+    const modal = document.getElementById('loginModal');
+    modal.style.display = 'block';
+    document.getElementById('username').focus();
+}
+
+// Close login modal
+function closeLoginModal() {
+    const modal = document.getElementById('loginModal');
+    modal.style.display = 'none';
+    document.getElementById('loginForm').reset();
+    document.getElementById('loginError').textContent = '';
+}
+
+// Handle login
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const loginError = document.getElementById('loginError');
+    
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            closeLoginModal();
+            await checkAuth();
+            showStatus('Login successful', 'success');
+        } else {
+            loginError.textContent = data.message || 'Login failed';
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        loginError.textContent = 'Error connecting to server';
+    }
+}
+
+// Handle logout
+async function handleLogout() {
+    try {
+        const response = await fetch('/api/logout', {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            await checkAuth();
+            showStatus('Logged out successfully', 'success');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        showStatus('Error logging out', 'error');
+    }
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
     fetchLocation();
     fetchHistory();
+    checkAuth();
     
     // Set up event listeners
     document.getElementById('updateBtn').addEventListener('click', manualUpdate);
     document.getElementById('refreshBtn').addEventListener('click', fetchLocation);
     document.getElementById('historyHeader').addEventListener('click', toggleHistory);
     document.getElementById('historyTrailToggle').addEventListener('change', toggleHistoryTrail);
+    
+    // Authentication event listeners
+    document.getElementById('loginBtn').addEventListener('click', openLoginModal);
+    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    
+    // Modal close handlers
+    const modal = document.getElementById('loginModal');
+    const closeBtn = modal.querySelector('.close');
+    closeBtn.addEventListener('click', closeLoginModal);
+    
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeLoginModal();
+        }
+    });
     
     // Auto-refresh every 5 minutes
     setInterval(fetchLocation, 5 * 60 * 1000);

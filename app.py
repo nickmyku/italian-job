@@ -1,15 +1,23 @@
-from flask import Flask, jsonify, send_from_directory, url_for
+from flask import Flask, jsonify, send_from_directory, url_for, request, session
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import sqlite3
 import os
+import secrets
 from datetime import datetime
+from functools import wraps
 from scraper import scrape_ship_location
 from scheduler import start_scheduler
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
-CORS(app)
+
+# Configure session management
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+CORS(app, supports_credentials=True)
 
 # Configure Flask-Limiter
 # Default: 200 requests per minute for general API usage
@@ -23,6 +31,20 @@ limiter = Limiter(
 )
 
 DB_PATH = 'ship_locations.db'
+
+# Simple authentication credentials (in production, use a database with hashed passwords)
+USERS = {
+    'admin': 'shiptracker2024'  # username: password
+}
+
+def require_auth(f):
+    """Decorator to require authentication for endpoints"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('authenticated'):
+            return jsonify({'success': False, 'message': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 def init_db():
     """Initialize the database with ship locations table"""
@@ -148,10 +170,45 @@ def get_history():
     
     return jsonify({'history': history})
 
+@app.route('/api/login', methods=['POST'])
+@limiter.limit("10 per minute")  # Prevent brute force attacks
+def login():
+    """Login endpoint to establish session"""
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        
+        if username in USERS and USERS[username] == password:
+            session['authenticated'] = True
+            session['username'] = username
+            return jsonify({'success': True, 'message': 'Login successful'})
+        else:
+            return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    """Logout endpoint to clear session"""
+    session.clear()
+    return jsonify({'success': True, 'message': 'Logged out successfully'})
+
+@app.route('/api/check-auth', methods=['GET'])
+def check_auth():
+    """Check if user is authenticated"""
+    authenticated = session.get('authenticated', False)
+    username = session.get('username', None)
+    return jsonify({
+        'authenticated': authenticated,
+        'username': username
+    })
+
 @app.route('/api/update', methods=['POST'])
 @limiter.limit("60 per minute")  # Allow at least once per minute updates
+@require_auth
 def manual_update():
-    """Manually trigger an update"""
+    """Manually trigger an update (requires authentication)"""
     try:
         location_data = scrape_ship_location('Sagittarius Leader')
         if location_data:
