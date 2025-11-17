@@ -72,7 +72,7 @@ Main Flask application that:
   - `GET /` - Serves index.html (no rate limit)
   - `GET /api/location` - Returns latest ship location (120 req/min)
   - `GET /api/history` - Returns last 30 location entries (120 req/min)
-  - `POST /api/update` - Manually triggers location update (60 req/min)
+  - `POST /api/update` - Manually triggers location update (1 req/min)
   - `GET /screenshots/current.bmp` - Serves the latest application screenshot (no rate limit)
 - Starts background scheduler on application startup
 - Runs on `0.0.0.0:3000` (accessible on all network interfaces)
@@ -292,7 +292,7 @@ Returns the last 30 location entries.
 ### POST /api/update
 Manually triggers a location update by scraping shipnext.com.
 
-**Rate Limit**: 60 requests per minute (allows customer updates at least once per minute)
+**Rate Limit**: 1 requests per minute (allows customer updates at least once per minute)
 
 **Response** (200 OK):
 ```json
@@ -373,13 +373,13 @@ limiter = Limiter(
 )
 
 # Specific endpoint limits
-@limiter.limit("60 per minute")  # For /api/update endpoint
+@limiter.limit("1 per minute")  # For /api/update endpoint
 @limiter.limit("120 per minute")  # For /api/location and /api/history
 ```
 
 **Current Rate Limits**:
 - Default: 200 requests per minute
-- `/api/update`: 60 requests per minute (allows customer updates at least once per minute)
+- `/api/update`: 1 requests per minute (allows customer updates at least once per minute)
 - `/api/location` and `/api/history`: 120 requests per minute (read operations)
 - Static files and screenshots: Exempt from rate limiting
 
