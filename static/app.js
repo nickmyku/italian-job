@@ -149,9 +149,20 @@ async function fetchLocation() {
 // Manual update
 async function manualUpdate() {
     try {
+        // Get API key from input
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        
+        if (!apiKey) {
+            showStatus('Please enter an API key to trigger updates', 'error');
+            return;
+        }
+        
         showStatus('Updating destination...', 'loading');
         const response = await fetch('/api/update', {
-            method: 'POST'
+            method: 'POST',
+            headers: {
+                'X-API-Key': apiKey
+            }
         });
         const data = await response.json();
         
@@ -160,6 +171,8 @@ async function manualUpdate() {
             showStatus('Destination updated successfully', 'success');
             // Refresh history
             fetchHistory();
+            // Store API key in localStorage for convenience
+            localStorage.setItem('apiKey', apiKey);
         } else {
             showStatus('Failed to update destination: ' + (data.message || 'Unknown error'), 'error');
         }
@@ -340,17 +353,38 @@ function toggleHistory() {
     }
 }
 
+// Toggle API key visibility
+function toggleApiKeyVisibility() {
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const toggleBtn = document.getElementById('toggleApiKey');
+    
+    if (apiKeyInput.type === 'password') {
+        apiKeyInput.type = 'text';
+        toggleBtn.textContent = '🙈';
+    } else {
+        apiKeyInput.type = 'password';
+        toggleBtn.textContent = '👁️';
+    }
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
     fetchLocation();
     fetchHistory();
     
+    // Load saved API key from localStorage
+    const savedApiKey = localStorage.getItem('apiKey');
+    if (savedApiKey) {
+        document.getElementById('apiKeyInput').value = savedApiKey;
+    }
+    
     // Set up event listeners
     document.getElementById('updateBtn').addEventListener('click', manualUpdate);
     document.getElementById('refreshBtn').addEventListener('click', fetchLocation);
     document.getElementById('historyHeader').addEventListener('click', toggleHistory);
     document.getElementById('historyTrailToggle').addEventListener('change', toggleHistoryTrail);
+    document.getElementById('toggleApiKey').addEventListener('click', toggleApiKeyVisibility);
     
     // Auto-refresh every 5 minutes
     setInterval(fetchLocation, 5 * 60 * 1000);

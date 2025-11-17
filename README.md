@@ -65,19 +65,22 @@ This application tracks the location and destination of the cargo ship "Sagittar
 
 ### app.py
 Main Flask application that:
-- Initializes SQLite database with `ship_locations` table
+- Initializes SQLite database with `ship_locations` and `api_keys` tables
 - Configures Flask-Limiter for rate limiting API endpoints
+- Implements API key authentication for POST endpoints
 - Serves static files (HTML, CSS, JS)
 - Provides REST API endpoints:
   - `GET /` - Serves index.html (no rate limit)
   - `GET /api/location` - Returns latest ship location (120 req/min)
   - `GET /api/history` - Returns last 30 location entries (120 req/min)
-  - `POST /api/update` - Manually triggers location update (60 req/min)
+  - `POST /api/update` - Manually triggers location update (60 req/min, **requires API key**)
   - `GET /screenshots/current.bmp` - Serves the latest application screenshot (no rate limit)
 - Starts background scheduler on application startup
 - Runs on `0.0.0.0:3000` (accessible on all network interfaces)
 
-**Database Schema** (`ship_locations` table):
+**Database Schema**:
+
+`ship_locations` table:
 - `id` (INTEGER PRIMARY KEY)
 - `ship_name` (TEXT) - Currently "Sagittarius Leader"
 - `latitude` (REAL) - Decimal degrees (-90 to 90)
@@ -86,6 +89,14 @@ Main Flask application that:
 - `location_text` (TEXT) - Human-readable destination/port name
 - `speed` (REAL) - Speed in knots (optional)
 - `heading` (REAL) - Heading in degrees 0-360 (optional)
+
+`api_keys` table:
+- `id` (INTEGER PRIMARY KEY)
+- `key` (TEXT UNIQUE) - The API key string
+- `name` (TEXT) - Descriptive name for the key
+- `created_at` (TEXT) - ISO format datetime string
+- `last_used` (TEXT) - ISO format datetime string (updated on each use)
+- `is_active` (INTEGER) - 1 for active, 0 for disabled
 
 ### scraper.py
 Web scraping module that extracts ship location data from shipnext.com:
@@ -241,6 +252,8 @@ The application will:
 
 All API endpoints are protected by rate limiting. When limits are exceeded, the server returns HTTP 429 (Too Many Requests) with `X-RateLimit-*` headers indicating the limit, remaining requests, and reset time.
 
+**Note**: POST endpoints require API key authentication. See the "API Key Authentication" section below for details.
+
 ### GET /api/location
 Returns the latest ship location data.
 
@@ -292,7 +305,18 @@ Returns the last 30 location entries.
 ### POST /api/update
 Manually triggers a location update by scraping shipnext.com.
 
+**Authentication**: Requires API key (see API Key Authentication section below)
+
 **Rate Limit**: 60 requests per minute (allows customer updates at least once per minute)
+
+**Headers**:
+- `X-API-Key`: Your API key (required)
+
+**Example Request**:
+```bash
+curl -X POST http://localhost:3000/api/update \
+  -H "X-API-Key: your-api-key-here"
+```
 
 **Response** (200 OK):
 ```json
@@ -305,6 +329,22 @@ Manually triggers a location update by scraping shipnext.com.
     "speed": 12.5,
     "heading": 45.0
   }
+}
+```
+
+**Response** (401 Unauthorized):
+```json
+{
+  "success": false,
+  "message": "API key is required. Include it in X-API-Key header or api_key query parameter."
+}
+```
+
+**Response** (403 Forbidden):
+```json
+{
+  "success": false,
+  "message": "Invalid or inactive API key"
 }
 ```
 
@@ -327,6 +367,87 @@ Serves the latest application screenshot as a BMP image file.
 
 **Response** (404 Not Found):
 - File not found if screenshot hasn't been captured yet
+
+## API Key Authentication
+
+### Overview
+
+POST endpoints (like `/api/update`) require API key authentication to prevent unauthorized data modifications. GET endpoints remain open for public data access.
+
+### Getting Your API Key
+
+When you first run the application, a default API key is automatically generated and displayed in the console:
+
+```
+================================================================================
+GENERATED DEFAULT API KEY: your-generated-key-here
+Store this key securely! You'll need it to make POST requests.
+You can also set a custom key using the API_KEY environment variable.
+================================================================================
+```
+
+**Important**: Save this key immediately! It's stored in the database but won't be displayed again.
+
+### Setting a Custom API Key
+
+To use a custom API key instead of the auto-generated one, set the `API_KEY` environment variable before running the application:
+
+```bash
+export API_KEY="your-custom-api-key"
+python app.py
+```
+
+### Using API Keys
+
+**In the Web Interface**:
+1. Enter your API key in the "API Key" input field
+2. Click "Get Current Location" to trigger a manual update
+3. The key is stored in your browser's localStorage for convenience
+
+**In API Requests**:
+
+Include the API key in the `X-API-Key` header:
+
+```bash
+curl -X POST http://localhost:3000/api/update \
+  -H "X-API-Key: your-api-key-here"
+```
+
+Or as a query parameter:
+
+```bash
+curl -X POST "http://localhost:3000/api/update?api_key=your-api-key-here"
+```
+
+### Managing API Keys
+
+API keys are stored in the `api_keys` table in the SQLite database with the following fields:
+- `key`: The API key string
+- `name`: A descriptive name for the key
+- `created_at`: When the key was created
+- `last_used`: When the key was last used (updated on each successful authentication)
+- `is_active`: Whether the key is active (1) or disabled (0)
+
+To add additional API keys, insert them directly into the database:
+
+```sql
+INSERT INTO api_keys (key, name, created_at, is_active)
+VALUES ('new-api-key', 'Production Key', datetime('now'), 1);
+```
+
+To disable a key without deleting it:
+
+```sql
+UPDATE api_keys SET is_active = 0 WHERE key = 'old-api-key';
+```
+
+### Security Best Practices
+
+1. **Never commit API keys to version control**
+2. **Use environment variables** for production deployments
+3. **Rotate keys regularly** by disabling old keys and creating new ones
+4. **Use HTTPS** in production to protect keys in transit
+5. **Monitor the `last_used` field** to detect unauthorized access
 
 ## Configuration
 

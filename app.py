@@ -1,10 +1,12 @@
-from flask import Flask, jsonify, send_from_directory, url_for
+from flask import Flask, jsonify, send_from_directory, url_for, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import sqlite3
 import os
+import secrets
 from datetime import datetime
+from functools import wraps
 from scraper import scrape_ship_location
 from scheduler import start_scheduler
 
@@ -25,7 +27,7 @@ limiter = Limiter(
 DB_PATH = 'ship_locations.db'
 
 def init_db():
-    """Initialize the database with ship locations table"""
+    """Initialize the database with ship locations and API keys tables"""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
@@ -40,8 +42,70 @@ def init_db():
             heading REAL
         )
     ''')
+    
+    # Create API keys table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS api_keys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            last_used TEXT,
+            is_active INTEGER DEFAULT 1
+        )
+    ''')
+    
+    # Create a default API key if none exists
+    c.execute('SELECT COUNT(*) FROM api_keys WHERE is_active = 1')
+    if c.fetchone()[0] == 0:
+        default_key = os.environ.get('API_KEY', secrets.token_urlsafe(32))
+        c.execute('''
+            INSERT INTO api_keys (key, name, created_at, is_active)
+            VALUES (?, ?, ?, 1)
+        ''', (default_key, 'Default Key', datetime.now().isoformat()))
+        print(f"\n{'='*80}")
+        print(f"GENERATED DEFAULT API KEY: {default_key}")
+        print(f"Store this key securely! You'll need it to make POST requests.")
+        print(f"You can also set a custom key using the API_KEY environment variable.")
+        print(f"{'='*80}\n")
+    
     conn.commit()
     conn.close()
+
+def require_api_key(f):
+    """Decorator to require API key authentication for endpoints"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Get API key from header or query parameter
+        api_key = request.headers.get('X-API-Key') or request.args.get('api_key')
+        
+        if not api_key:
+            return jsonify({
+                'success': False,
+                'message': 'API key is required. Include it in X-API-Key header or api_key query parameter.'
+            }), 401
+        
+        # Validate API key
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute('SELECT id, is_active FROM api_keys WHERE key = ?', (api_key,))
+        result = c.fetchone()
+        
+        if not result or result[1] != 1:
+            conn.close()
+            return jsonify({
+                'success': False,
+                'message': 'Invalid or inactive API key'
+            }), 403
+        
+        # Update last_used timestamp
+        c.execute('UPDATE api_keys SET last_used = ? WHERE id = ?', 
+                 (datetime.now().isoformat(), result[0]))
+        conn.commit()
+        conn.close()
+        
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/')
 @limiter.exempt  # No rate limiting on static pages
@@ -150,8 +214,9 @@ def get_history():
 
 @app.route('/api/update', methods=['POST'])
 @limiter.limit("60 per minute")  # Allow at least once per minute updates
+@require_api_key
 def manual_update():
-    """Manually trigger an update"""
+    """Manually trigger an update (requires API key authentication)"""
     try:
         location_data = scrape_ship_location('Sagittarius Leader')
         if location_data:
