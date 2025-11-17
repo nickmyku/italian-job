@@ -41,3 +41,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+# SSL Certificates (private keys should never be committed)
+ssl/
+*.pem
+*.key
+*.crt
+*.cert
