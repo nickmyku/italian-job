@@ -223,16 +223,16 @@ python test_destination.py
 
 ### Production Mode (Recommended - Gunicorn):
 
-For production deployments, use Gunicorn:
+For production deployments, use Gunicorn: (always use 1 worker option to avoid issues with the scheduler)
 
 ```bash
-gunicorn -c gunicorn_config.py app:app
+gunicorn -c gunicorn_config.py --workers 1 app:app
 ```
 
 Or with custom options:
 
 ```bash
-gunicorn --bind 0.0.0.0:3000 --workers 4 --preload app:app
+gunicorn --bind 0.0.0.0:3000 --workers 1 --preload app:app
 ```
 
 **Gunicorn Configuration**:
