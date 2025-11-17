@@ -271,6 +271,133 @@ The application will:
 - Development server runs with `debug=False` and `use_reloader=False` (reloader disabled to prevent scheduler conflicts)
 - For production, always use Gunicorn for better performance and reliability
 
+## HTTPS Configuration
+
+The application supports HTTPS/SSL encryption for secure connections. HTTPS can be enabled by providing SSL certificate files via environment variables.
+
+### Development (Self-Signed Certificates)
+
+For local development and testing, you can generate self-signed certificates:
+
+```bash
+# Generate self-signed SSL certificates
+./generate_ssl_cert.sh
+```
+
+This creates:
+- `ssl/cert.pem` - SSL certificate
+- `ssl/key.pem` - Private key
+
+Then set environment variables and start Gunicorn:
+
+```bash
+export SSL_CERTFILE=ssl/cert.pem
+export SSL_KEYFILE=ssl/key.pem
+export SSL_PORT=3000
+gunicorn -c gunicorn_config.py --workers 1 app:app
+```
+
+Access the application at: `https://localhost:3000`
+
+**Note**: Browsers will show a security warning for self-signed certificates. This is normal for development. Click "Advanced" and "Proceed to localhost" to continue.
+
+### Production (Trusted Certificates)
+
+For production deployments, use certificates from a trusted Certificate Authority (CA), such as Let's Encrypt:
+
+#### Using Let's Encrypt (Certbot)
+
+1. **Install Certbot**:
+```bash
+sudo apt-get update
+sudo apt-get install certbot
+```
+
+2. **Obtain certificates** (replace `yourdomain.com` with your domain):
+```bash
+sudo certbot certonly --standalone -d yourdomain.com
+```
+
+3. **Set environment variables**:
+```bash
+export SSL_CERTFILE=/etc/letsencrypt/live/yourdomain.com/fullchain.pem
+export SSL_KEYFILE=/etc/letsencrypt/live/yourdomain.com/privkey.pem
+export SSL_PORT=443
+```
+
+4. **Start Gunicorn with HTTPS**:
+```bash
+gunicorn -c gunicorn_config.py --workers 1 app:app
+```
+
+5. **Auto-renewal** (recommended):
+   - Certificates expire every 90 days
+   - Set up a cron job to renew automatically:
+```bash
+sudo crontab -e
+# Add this line:
+0 0 * * * certbot renew --quiet && systemctl reload gunicorn
+```
+
+#### Using Other Certificate Providers
+
+If you have certificates from another provider:
+
+```bash
+export SSL_CERTFILE=/path/to/your/certificate.pem
+export SSL_KEYFILE=/path/to/your/private-key.pem
+export SSL_PORT=443
+gunicorn -c gunicorn_config.py --workers 1 app:app
+```
+
+### Environment Variables
+
+- `SSL_CERTFILE` - Path to SSL certificate file (required for HTTPS)
+- `SSL_KEYFILE` - Path to SSL private key file (required for HTTPS)
+- `SSL_PORT` - Port to bind HTTPS server (default: 3000)
+
+**Important Notes**:
+- If `SSL_CERTFILE` and `SSL_KEYFILE` are not set, the server runs in HTTP mode (default behavior)
+- Ensure certificate files have appropriate permissions (key file should be readable only by the server user)
+- For production, use port 443 (standard HTTPS port) or configure a reverse proxy (nginx/Apache) in front of Gunicorn
+- Consider using a reverse proxy (nginx/Apache) in production for additional features like HTTP to HTTPS redirect, load balancing, and static file serving
+
+### Reverse Proxy Setup (Recommended for Production)
+
+For production deployments, it's recommended to use a reverse proxy like nginx in front of Gunicorn:
+
+1. **Gunicorn** runs on localhost with HTTPS (or HTTP)
+2. **Nginx** handles:
+   - SSL termination (if using nginx SSL)
+   - HTTP to HTTPS redirects
+   - Static file serving
+   - Load balancing (if multiple Gunicorn instances)
+
+Example nginx configuration:
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+
+    location / {
+        proxy_pass https://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
 ## API Endpoints
 
 All API endpoints are protected by rate limiting. When limits are exceeded, the server returns HTTP 429 (Too Many Requests) with `X-RateLimit-*` headers indicating the limit, remaining requests, and reset time.
