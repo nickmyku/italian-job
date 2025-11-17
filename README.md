@@ -198,6 +198,12 @@ CSS styling for the application including:
 
 ## Installation
 
+1. **Setup Virtual Enviornment**:
+```bash
+python3 -m venv webvenv
+source webvenv/bin/activate
+``` 
+
 1. **Install Linux packages**:
 ```bash
 sudo apt-get install libxml2-dev libxslt-dev
