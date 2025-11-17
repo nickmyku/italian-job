@@ -178,10 +178,12 @@ def manual_update():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# Initialize database and scheduler when app is loaded
+# This ensures proper initialization when running with both gunicorn and flask dev server
+init_db()
+start_scheduler()
+
 if __name__ == '__main__':
-    init_db()
-    
-    # Start scheduler - singleton pattern in scheduler.py prevents multiple instances
-    # Disable reloader to prevent scheduler from being killed on code changes
-    start_scheduler()
+    # Only run development server if script is executed directly
+    # For production, use: gunicorn -w 1 -b 0.0.0.0:3000 app:app
     app.run(host='0.0.0.0', port=3000, debug=False, use_reloader=False)

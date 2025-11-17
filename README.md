@@ -218,24 +218,41 @@ python test_destination.py
 
 ## Running the Application
 
-### Start the Flask server:
+### Production (Recommended): Using Gunicorn
+
+**Start the server with Gunicorn**:
+```bash
+gunicorn -c gunicorn.conf.py app:app
+```
+
+Or with inline configuration:
+```bash
+gunicorn -w 1 -b 0.0.0.0:3000 --access-logfile - --error-logfile - app:app
+```
+
+**IMPORTANT**: Always use `workers=1` (or `-w 1`) to avoid scheduler conflicts. The APScheduler runs in-memory, and multiple workers would create duplicate schedulers leading to repeated updates.
+
+### Development: Using Flask Development Server
+
 ```bash
 python app.py
 ```
 
-The application will:
+### Application Initialization
+
+When the application starts (with either method), it will:
 - Initialize the SQLite database (creates `ship_locations.db` if it doesn't exist)
 - Start the background scheduler
 - Run an initial location update
 - Take an initial screenshot after 5 seconds (allows server to start)
-- Start the Flask server on `http://localhost:3000`
+- Start the server on `http://0.0.0.0:3000`
 
 ### Access the Application:
 - Web interface: `http://localhost:3000`
 - API endpoint: `http://localhost:3000/api/location`
 - Screenshot: `http://localhost:3000/screenshots/current.bmp`
 
-**Note**: The Flask server runs with `debug=True` and `use_reloader=False` (reloader disabled to prevent scheduler conflicts).
+**Note**: When using the Flask development server, the reloader is disabled (`use_reloader=False`) to prevent scheduler conflicts.
 
 ## API Endpoints
 
@@ -493,6 +510,85 @@ The application now displays a visual trail of the ship's recent movements:
 2. Click the "Show History Trail" checkbox in the controls panel to hide/show the trail
 3. The trail updates automatically every 5 minutes or when you click "Get Current Location"
 4. Historical locations in the sidebar are still clickable to view past positions
+
+## Production Deployment
+
+### Using Gunicorn (WSGI Server)
+
+The application is configured to run with Gunicorn for production use:
+
+**Basic Usage**:
+```bash
+gunicorn -c gunicorn.conf.py app:app
+```
+
+**Configuration Options** (see `gunicorn.conf.py`):
+- **Workers**: Set to 1 (required for APScheduler)
+- **Bind**: 0.0.0.0:3000
+- **Timeout**: 30 seconds
+- **Logging**: Access and error logs to stdout/stderr
+
+**Important Notes**:
+- Always use 1 worker process (scheduler limitation)
+- For high-traffic scenarios, consider using a reverse proxy (nginx) in front of Gunicorn
+- The in-memory rate limiter works only for single-worker deployments
+- For multi-instance deployments, switch to Redis-backed rate limiting
+
+### Systemd Service (Linux)
+
+Create a systemd service file `/etc/systemd/system/ship-tracker.service`:
+```ini
+[Unit]
+Description=Ship Tracker Application
+After=network.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/path/to/workspace
+Environment="PATH=/path/to/venv/bin"
+ExecStart=/path/to/venv/bin/gunicorn -c gunicorn.conf.py app:app
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+```bash
+sudo systemctl enable ship-tracker
+sudo systemctl start ship-tracker
+sudo systemctl status ship-tracker
+```
+
+### Reverse Proxy (nginx)
+
+Example nginx configuration:
+```nginx
+upstream ship_tracker {
+    server 127.0.0.1:3000;
+}
+
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    location / {
+        proxy_pass http://ship_tracker;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /static {
+        alias /path/to/workspace/static;
+        expires 1h;
+    }
+}
+```
 
 ## Future Enhancements
 
