@@ -149,7 +149,7 @@ def get_history():
     return jsonify({'history': history})
 
 @app.route('/api/update', methods=['POST'])
-@limiter.limit("60 per minute")  # Allow at least once per minute updates
+@limiter.limit("1 per minute")  # Allow at least once per minute updates
 def manual_update():
     """Manually trigger an update"""
     try:
