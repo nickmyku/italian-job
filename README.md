@@ -20,6 +20,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 - **Framework**: Flask 3.0.0 with CORS enabled
 - **WSGI Server**: Gunicorn for production deployments
 - **Rate Limiting**: Flask-Limiter for API protection and rate control
+- **Security Headers**: Flask-Talisman for comprehensive security header protection
 - **Database**: SQLite (`ship_locations.db`)
 - **Scheduler**: APScheduler (BackgroundScheduler) for periodic updates
 - **Web Scraping**: BeautifulSoup4 with requests library
@@ -69,6 +70,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 Main Flask application that:
 - Initializes SQLite database with `ship_locations` table
 - Configures Flask-Limiter for rate limiting API endpoints
+- Configures Flask-Talisman for security headers protection
 - Serves static files (HTML, CSS, JS)
 - Provides REST API endpoints:
   - `GET /` - Serves index.html (no rate limit)
@@ -182,6 +184,7 @@ CSS styling for the application including:
 - `gunicorn==21.2.0` - WSGI HTTP server for production
 - `flask-cors==4.0.0` - CORS support for API
 - `flask-limiter==3.5.0` - Rate limiting for API endpoints
+- `flask-talisman==1.1.0` - Security headers protection
 - `requests==2.31.0` - HTTP requests for web scraping
 - `beautifulsoup4==4.12.2` - HTML parsing
 - `lxml==6.0.2` - XML/HTML parser backend
@@ -482,6 +485,54 @@ Serves the latest application screenshot as a BMP image file.
 
 **Response** (404 Not Found):
 - File not found if screenshot hasn't been captured yet
+
+## Security
+
+The application implements comprehensive security headers using Flask-Talisman to protect against common web vulnerabilities.
+
+### Security Headers
+
+All HTTP responses include the following security headers:
+
+- **Content-Security-Policy (CSP)**: Restricts resource loading to trusted sources
+  - Scripts: Allows self-hosted scripts, Leaflet.js from unpkg.com, and inline scripts (required for map functionality)
+  - Styles: Allows self-hosted styles, Leaflet CSS from unpkg.com, and inline styles
+  - Images: Allows self-hosted images, data URIs, and CartoDB map tiles
+  - Frames: Prevents embedding in iframes (`frame-ancestors: 'none'`)
+
+- **Strict-Transport-Security (HSTS)**: Enforces HTTPS connections
+  - Max-age: 1 year (31536000 seconds)
+  - Note: Set `force_https=True` in production when HTTPS is enabled
+
+- **X-Frame-Options**: Set to `DENY` to prevent clickjacking attacks
+
+- **X-Content-Type-Options**: Set to `nosniff` to prevent MIME type sniffing
+
+- **X-XSS-Protection**: Enables browser XSS filtering
+
+- **Referrer-Policy**: Set to `strict-origin-when-cross-origin` to control referrer information
+
+- **Permissions-Policy**: Restricts browser features
+  - Geolocation: Disabled
+  - Camera: Disabled
+  - Microphone: Disabled
+
+### Configuration
+
+Security headers are configured in `app.py` using Flask-Talisman. To modify security settings:
+
+```python
+Talisman(
+    app,
+    force_https=False,  # Set to True in production with HTTPS
+    strict_transport_security=True,
+    strict_transport_security_max_age=31536000,
+    content_security_policy={...},  # Modify CSP directives as needed
+    ...
+)
+```
+
+**Important**: When deploying with HTTPS in production, set `force_https=True` to enforce secure connections.
 
 ## Configuration
 
