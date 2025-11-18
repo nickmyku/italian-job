@@ -2,6 +2,7 @@ from flask import Flask, jsonify, send_from_directory, url_for
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_talisman import Talisman
 import sqlite3
 import os
 from datetime import datetime
@@ -10,6 +11,33 @@ from scheduler import start_scheduler
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
+
+# Configure security headers
+Talisman(
+    app,
+    force_https=False,  # Set to True in production with HTTPS
+    strict_transport_security=True,
+    strict_transport_security_max_age=31536000,  # 1 year
+    content_security_policy={
+        'default-src': "'self'",
+        'script-src': "'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com",  # Allow Leaflet from unpkg
+        'style-src': "'self' 'unsafe-inline' https://unpkg.com",  # Allow Leaflet CSS from unpkg
+        'img-src': "'self' data: https: *.basemaps.cartocdn.com",  # Allow map tiles from CartoDB
+        'font-src': "'self' data:",
+        'connect-src': "'self'",  # API connections
+        'frame-ancestors': "'none'",
+    },
+    content_security_policy_nonce_in=['script-src', 'style-src'],
+    frame_options='DENY',
+    content_type_nosniff=True,
+    xss_filter=True,
+    referrer_policy='strict-origin-when-cross-origin',
+    permissions_policy={
+        'geolocation': '()',  # Disable geolocation
+        'camera': '()',  # Disable camera
+        'microphone': '()',  # Disable microphone
+    }
+)
 
 # Configure Flask-Limiter
 # Default: 200 requests per minute for general API usage
