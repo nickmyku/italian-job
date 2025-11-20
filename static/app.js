@@ -13,10 +13,11 @@ const defaultCoords = [0, 0];
 function initMap() {
     map = L.map('map').setView(defaultCoords, 2);
     
-    // Add OpenStreetMap tiles with darker country names
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19
+    // Add CartoDB Positron tiles (similar minimalist style to Toner Lite)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
     }).addTo(map);
 }
 
