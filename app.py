@@ -104,7 +104,7 @@ def get_location():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        SELECT latitude, longitude, timestamp, location_text, origin_city, speed, heading
+        SELECT latitude, longitude, timestamp, location_text, origin_city, speed
         FROM ship_locations
         WHERE ship_name = ?
         ORDER BY timestamp DESC
@@ -122,7 +122,6 @@ def get_location():
             'location_text': result[3],
             'origin_city': result[4],
             'speed': result[5],
-            'heading': result[6],
             'success': True
         })
     else:
@@ -138,7 +137,7 @@ def get_history():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        SELECT latitude, longitude, timestamp, location_text, origin_city, speed, heading
+        SELECT latitude, longitude, timestamp, location_text, origin_city, speed
         FROM ship_locations
         WHERE ship_name = ?
         ORDER BY timestamp DESC
@@ -156,8 +155,7 @@ def get_history():
             'timestamp': row[2],
             'location_text': row[3],
             'origin_city': row[4],
-            'speed': row[5],
-            'heading': row[6]
+            'speed': row[5]
         })
     
     return jsonify({'history': history})
@@ -183,7 +181,7 @@ def manual_update():
                 location_data.get('location_text', ''),
                 location_data.get('origin_city', ''),
                 location_data.get('speed'),
-                location_data.get('heading')
+                None
             ))
             conn.commit()
             conn.close()

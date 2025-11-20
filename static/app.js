@@ -128,9 +128,6 @@ function updateInfoPanel(data) {
     document.getElementById('eta').textContent = 
         daysUntil >= 0 ? `${daysUntil} days` : 'Arrived';
     
-    document.getElementById('heading').textContent = 
-        data.heading ? `${data.heading}°` : '-';
-    
     if (data.latitude && data.longitude) {
         document.getElementById('coordinates').textContent = 
             `${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`;
