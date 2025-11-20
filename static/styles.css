@@ -137,6 +137,11 @@ header h1 {
     z-index: 1;
 }
 
+/* Make country names darker on the map by enhancing contrast */
+#map .leaflet-tile-pane img {
+    filter: contrast(1.2) brightness(0.95);
+}
+
 .history-panel {
     padding: 20px 30px;
     background: #fff;
