@@ -312,8 +312,7 @@ def extract_from_shipnext_search(soup, ship_name):
         'origin_city': None,
         'latitude': None,
         'longitude': None,
-        'speed': None,
-        'heading': None
+        'speed': None
     }
     
     # Look for destination information
@@ -368,13 +367,6 @@ def extract_from_shipnext_search(soup, ship_name):
         except ValueError:
             pass
     
-    # Extract heading if available
-    heading_match = re.search(r'Heading[:\s]+([\d.]+)', text_content, re.I)
-    if heading_match:
-        try:
-            location_data['heading'] = float(heading_match.group(1))
-        except ValueError:
-            pass
     
     return location_data if location_data['latitude'] or location_data['location_text'] else None
 
@@ -385,8 +377,7 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         'origin_city': None,
         'latitude': None,
         'longitude': None,
-        'speed': None,
-        'heading': None
+        'speed': None
     }
     
     # Normalize ship name for comparison (case-insensitive, strip whitespace)
@@ -859,70 +850,6 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                 if location_data['speed']:
                     break
     
-    # Extract heading if available - try multiple patterns
-    heading_patterns = [
-        r'Heading[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
-        r'COG[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',  # Course Over Ground
-        r'Course[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
-        r'heading["\']?\s*[:=]\s*([\d.]+)',
-        r'"heading"[:\s]*([\d.]+)',
-        r'heading[:\s]*([\d.]+)',
-        r'Bearing[:\s]+([\d.]+)\s*(?:°|deg|degrees)?',
-    ]
-    
-    # Try text content first
-    for pattern in heading_patterns:
-        heading_match = re.search(pattern, text_content, re.I)
-        if heading_match:
-            try:
-                heading_value = float(heading_match.group(1))
-                # Normalize heading to 0-360 range
-                heading_value = heading_value % 360
-                location_data['heading'] = heading_value
-                print(f"[DEBUG] Heading extracted: {heading_value}")
-                break
-            except ValueError:
-                continue
-    
-    # Also check raw HTML if available
-    if not location_data['heading'] and response_text:
-        for pattern in heading_patterns:
-            heading_match = re.search(pattern, response_text, re.I)
-            if heading_match:
-                try:
-                    heading_value = float(heading_match.group(1))
-                    # Normalize heading to 0-360 range
-                    heading_value = heading_value % 360
-                    location_data['heading'] = heading_value
-                    print(f"[DEBUG] Heading extracted from raw HTML: {heading_value}")
-                    break
-                except ValueError:
-                    continue
-    
-    # Also check JavaScript/JSON data in script tags for heading
-    if not location_data['heading']:
-        for script in scripts:
-            if script.string:
-                heading_patterns_js = [
-                    r'heading["\']?\s*[:=]\s*([\d.]+)',
-                    r'"heading"[:\s]*([\d.]+)',
-                    r'heading[:\s]*([\d.]+)',
-                    r'course["\']?\s*[:=]\s*([\d.]+)',
-                ]
-                for pattern in heading_patterns_js:
-                    heading_match = re.search(pattern, script.string, re.I)
-                    if heading_match:
-                        try:
-                            heading_value = float(heading_match.group(1))
-                            # Normalize heading to 0-360 range
-                            heading_value = heading_value % 360
-                            location_data['heading'] = heading_value
-                            print(f"[DEBUG] Heading extracted from JavaScript: {heading_value}")
-                            break
-                        except ValueError:
-                            continue
-                if location_data['heading']:
-                    break
     
     # Return data if we have at least location text or coordinates
     # Log what we're returning for debugging
@@ -945,10 +872,5 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         print(f"[DEBUG] Final speed: {location_data['speed']}")
     else:
         print("[DEBUG] WARNING: Speed could not be found by the scraper")
-    
-    if location_data['heading'] is not None:
-        print(f"[DEBUG] Final heading: {location_data['heading']}")
-    else:
-        print("[DEBUG] WARNING: Heading could not be found by the scraper")
     
     return location_data if (location_data['latitude'] or location_data['location_text']) else None

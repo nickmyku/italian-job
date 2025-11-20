@@ -19,7 +19,6 @@ def test_scraper():
         print(f"  - Latitude: {data.get('latitude', 'None')}")
         print(f"  - Longitude: {data.get('longitude', 'None')}")
         print(f"  - Speed: {data.get('speed', 'None')}")
-        print(f"  - Heading: {data.get('heading', 'None')}")
         return True
     else:
         print("✗ Scraper returned no data")
