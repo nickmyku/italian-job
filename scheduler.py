@@ -22,24 +22,26 @@ def update_ship_location():
             c = conn.cursor()
             c.execute('''
                 INSERT INTO ship_locations 
-                (ship_name, latitude, longitude, timestamp, location_text, speed, heading)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (ship_name, latitude, longitude, timestamp, location_text, origin_city, speed, heading)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 'Sagittarius Leader',
                 location_data.get('latitude'),
                 location_data.get('longitude'),
                 datetime.now().isoformat(),
                 location_data.get('location_text', ''),
+                location_data.get('origin_city', ''),
                 location_data.get('speed'),
                 location_data.get('heading')
             ))
             conn.commit()
             conn.close()
             coord_info = f"{location_data.get('latitude')}, {location_data.get('longitude')}" if location_data.get('latitude') else "No coordinates"
+            origin_info = f", Origin: {location_data.get('origin_city')}" if location_data.get('origin_city') else ""
             dest_info = f", Destination: {location_data.get('location_text')}" if location_data.get('location_text') else ""
             speed_info = f", Speed: {location_data.get('speed')}" if location_data.get('speed') else ""
             heading_info = f", Heading: {location_data.get('heading')}" if location_data.get('heading') else ""
-            print(f"[{datetime.now()}] Location updated successfully: {coord_info}{dest_info}{speed_info}{heading_info}")
+            print(f"[{datetime.now()}] Location updated successfully: {coord_info}{origin_info}{dest_info}{speed_info}{heading_info}")
         else:
             print(f"[{datetime.now()}] Failed to retrieve location data (no coordinates or destination)")
     except Exception as e:

@@ -309,6 +309,7 @@ def extract_from_shipnext_search(soup, ship_name):
     """Extract destination/location data from shipnext.com search results"""
     location_data = {
         'location_text': None,
+        'origin_city': None,
         'latitude': None,
         'longitude': None,
         'speed': None,
@@ -381,6 +382,7 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
     """Extract destination/location data from shipnext.com detail page"""
     location_data = {
         'location_text': None,
+        'origin_city': None,
         'latitude': None,
         'longitude': None,
         'speed': None,
@@ -657,6 +659,142 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
                         print(f"[DEBUG] Destination extracted from raw HTML: {location_data['location_text']}")
                         break
     
+    # Extract origin city (city the ship is proceeding from)
+    # Look for origin patterns in text content
+    origin_patterns = [
+        r'from\s+([^\n\r.]+?)\s+to\s+',  # "from X to Y" - extract X
+        r'proceeding\s+from\s+([^\n\r.]+?)(?:\s+to|\s*\.|$)',  # "proceeding from X to Y" or "proceeding from X."
+        r'departed\s+from\s+([^\n\r.]+?)(?:\s+to|\s*\.|$)',  # "departed from X"
+        r'Origin[:\s]+([^\n\r]+)',  # "Origin: X"
+        r'From Port[:\s]+([^\n\r]+)',  # "From Port: X"
+        r'Last Port[:\s]+([^\n\r]+)',  # "Last Port: X"
+        r'Previous Port[:\s]+([^\n\r]+)',  # "Previous Port: X"
+        r'Port of Origin[:\s]+([^\n\r]+)',  # "Port of Origin: X"
+    ]
+    
+    # Try text content first
+    for pattern in origin_patterns:
+        match = re.search(pattern, text_content, re.I)
+        if match:
+            origin_text = match.group(1).strip()
+            # Clean up the origin text
+            origin_text = re.sub(r'\s+', ' ', origin_text)
+            # Remove common prefixes/suffixes
+            origin_text = re.sub(r'^(port|from|at|in|for)\s+', '', origin_text, flags=re.I)
+            # Keep both city and country (typically separated by comma)
+            # Split by comma and keep first two parts (city, country)
+            parts = [p.strip() for p in origin_text.split(',')[:2]]
+            origin_text = ', '.join(parts) if len(parts) > 1 else parts[0] if parts else origin_text
+            origin_text = origin_text.split('\n')[0].strip()
+            origin_text = origin_text.split('/')[0].strip()  # Sometimes "Port A / Port B"
+            
+            # Skip generic metadata/advertising phrases
+            skip_phrases = [
+                r'latest.*AIS.*Satellite.*data',
+                r'AIS.*Satellite.*data',
+                r'Satellite.*AIS.*data',
+                r'latest.*data',
+                r'real.*time.*data',
+                r'tracking.*data',
+                r'vessel.*status',
+                r'ship.*status',
+                r'position.*data',
+                r'location.*data',
+                r'click.*here',
+                r'show.*more',
+                r'view.*details',
+                r'see.*more',
+            ]
+            should_skip = False
+            origin_text_lower = origin_text.lower()
+            for phrase in skip_phrases:
+                if re.search(phrase, origin_text_lower, re.I):
+                    should_skip = True
+                    print(f"[DEBUG] Skipping generic phrase for origin: {origin_text}")
+                    break
+            
+            # Skip if it looks like a date, coordinates, too short, or generic phrase
+            if not should_skip and \
+               not re.match(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', origin_text) and \
+               not re.match(r'^-?\d+\.?\d*[,\s]+-?\d+\.?\d*$', origin_text) and \
+               len(origin_text) > 2 and len(origin_text) < 100 and \
+               re.search(r'[a-zA-Z]{3,}', origin_text):  # Must have letters (place name)
+                location_data['origin_city'] = origin_text
+                print(f"[DEBUG] Origin city extracted from text pattern: {location_data['origin_city']}")
+                break
+    
+    # Also try raw HTML if origin not found in parsed text
+    if not location_data['origin_city'] and response_text:
+        for pattern in origin_patterns:
+            match = re.search(pattern, response_text, re.I)
+            if match:
+                origin_text = match.group(1).strip()
+                origin_text = re.sub(r'\s+', ' ', origin_text)
+                origin_text = re.sub(r'^(port|from|at|in|for)\s+', '', origin_text, flags=re.I)
+                # Keep both city and country (typically separated by comma)
+                # Split by comma and keep first two parts (city, country)
+                parts = [p.strip() for p in origin_text.split(',')[:2]]
+                origin_text = ', '.join(parts) if len(parts) > 1 else parts[0] if parts else origin_text
+                origin_text = origin_text.split('\n')[0].strip()
+                origin_text = origin_text.split('/')[0].strip()
+                
+                # Skip generic metadata/advertising phrases
+                skip_phrases = [
+                    r'latest.*AIS.*Satellite.*data',
+                    r'AIS.*Satellite.*data',
+                    r'Satellite.*AIS.*data',
+                    r'latest.*data',
+                    r'real.*time.*data',
+                    r'tracking.*data',
+                    r'vessel.*status',
+                    r'ship.*status',
+                    r'position.*data',
+                    r'location.*data',
+                    r'click.*here',
+                    r'show.*more',
+                    r'view.*details',
+                    r'see.*more',
+                ]
+                should_skip = False
+                origin_text_lower = origin_text.lower()
+                for phrase in skip_phrases:
+                    if re.search(phrase, origin_text_lower, re.I):
+                        should_skip = True
+                        print(f"[DEBUG] Skipping generic phrase for origin: {origin_text}")
+                        break
+                
+                # Skip if it looks like a date, coordinates, too short, or generic phrase
+                if not should_skip and \
+                   not re.match(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', origin_text) and \
+                   not re.match(r'^-?\d+\.?\d*[,\s]+-?\d+\.?\d*$', origin_text) and \
+                   len(origin_text) > 2 and len(origin_text) < 100 and \
+                   re.search(r'[a-zA-Z]{3,}', origin_text):  # Must have letters (place name)
+                    location_data['origin_city'] = origin_text
+                    print(f"[DEBUG] Origin city extracted from raw HTML: {location_data['origin_city']}")
+                    break
+    
+    # Also check table structures for origin
+    if not location_data['origin_city']:
+        tables = soup.find_all('table')
+        for table in tables:
+            rows = table.find_all('tr')
+            for row in rows:
+                cells = row.find_all(['td', 'th'])
+                if len(cells) >= 2:
+                    # Check if first cell contains origin-related keywords
+                    label_text = cells[0].get_text(strip=True).lower()
+                    if any(keyword in label_text for keyword in ['origin', 'from', 'last port', 'previous port', 'departed']):
+                        value_text = cells[1].get_text(strip=True)
+                        # Clean and validate
+                        if value_text and len(value_text) < 100 and len(value_text) > 2:
+                            if not re.match(r'^-?\d+\.?\d*[,\s]+-?\d+\.?\d*$', value_text) and \
+                               not re.match(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', value_text):
+                                location_data['origin_city'] = value_text
+                                print(f"[DEBUG] Origin city found in table: {location_data['origin_city']}")
+                                break
+            if location_data['origin_city']:
+                break
+    
     # Geocode destination if needed
     if location_data['location_text'] and not location_data['latitude']:
         lat, lon = geocode_location(location_data['location_text'])
@@ -792,6 +930,11 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         print(f"[DEBUG] Final destination text: {location_data['location_text']}")
     else:
         print("[DEBUG] WARNING: Destination could not be found by the scraper")
+    
+    if location_data['origin_city']:
+        print(f"[DEBUG] Final origin city: {location_data['origin_city']}")
+    else:
+        print("[DEBUG] WARNING: Origin city could not be found by the scraper")
     
     if location_data['latitude'] and location_data['longitude']:
         print(f"[DEBUG] Final coordinates: {location_data['latitude']}, {location_data['longitude']}")
