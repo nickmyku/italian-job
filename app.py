@@ -36,10 +36,17 @@ def init_db():
             longitude REAL,
             timestamp TEXT NOT NULL,
             location_text TEXT,
+            origin_city TEXT,
             speed REAL,
             heading REAL
         )
     ''')
+    # Add origin_city column to existing tables if it doesn't exist
+    try:
+        c.execute('ALTER TABLE ship_locations ADD COLUMN origin_city TEXT')
+    except sqlite3.OperationalError:
+        # Column already exists, ignore
+        pass
     conn.commit()
     conn.close()
 
@@ -97,7 +104,7 @@ def get_location():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        SELECT latitude, longitude, timestamp, location_text, speed, heading
+        SELECT latitude, longitude, timestamp, location_text, origin_city, speed, heading
         FROM ship_locations
         WHERE ship_name = ?
         ORDER BY timestamp DESC
@@ -113,8 +120,9 @@ def get_location():
             'longitude': result[1],
             'timestamp': result[2],
             'location_text': result[3],
-            'speed': result[4],
-            'heading': result[5],
+            'origin_city': result[4],
+            'speed': result[5],
+            'heading': result[6],
             'success': True
         })
     else:
@@ -130,7 +138,7 @@ def get_history():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        SELECT latitude, longitude, timestamp, location_text, speed, heading
+        SELECT latitude, longitude, timestamp, location_text, origin_city, speed, heading
         FROM ship_locations
         WHERE ship_name = ?
         ORDER BY timestamp DESC
@@ -147,8 +155,9 @@ def get_history():
             'longitude': row[1],
             'timestamp': row[2],
             'location_text': row[3],
-            'speed': row[4],
-            'heading': row[5]
+            'origin_city': row[4],
+            'speed': row[5],
+            'heading': row[6]
         })
     
     return jsonify({'history': history})
@@ -164,14 +173,15 @@ def manual_update():
             c = conn.cursor()
             c.execute('''
                 INSERT INTO ship_locations 
-                (ship_name, latitude, longitude, timestamp, location_text, speed, heading)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (ship_name, latitude, longitude, timestamp, location_text, origin_city, speed, heading)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 'Sagittarius Leader',
                 location_data.get('latitude'),
                 location_data.get('longitude'),
                 datetime.now().isoformat(),
                 location_data.get('location_text', ''),
+                location_data.get('origin_city', ''),
                 location_data.get('speed'),
                 location_data.get('heading')
             ))

@@ -114,6 +114,8 @@ function updateInfoPanel(data) {
         document.getElementById('lastUpdated').textContent = date.toLocaleString();
     }
     
+    document.getElementById('originCity').textContent = 
+        data.origin_city || '-';
     document.getElementById('locationText').textContent = 
         data.location_text || 'Unknown';
     document.getElementById('speed').textContent = 
