@@ -118,8 +118,16 @@ function updateInfoPanel(data) {
         data.origin_city || '-';
     document.getElementById('locationText').textContent = 
         data.location_text || 'Unknown';
-    document.getElementById('speed').textContent = 
-        data.speed ? `${data.speed} knots` : '-';
+    
+    // Calculate days until ETA (December 16th, 2025)
+    const etaDate = new Date('2025-12-16T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    etaDate.setHours(0, 0, 0, 0);
+    const daysUntil = Math.ceil((etaDate - today) / (1000 * 60 * 60 * 24));
+    document.getElementById('eta').textContent = 
+        daysUntil >= 0 ? `${daysUntil} days` : 'Arrived';
+    
     document.getElementById('heading').textContent = 
         data.heading ? `${data.heading}°` : '-';
     
