@@ -131,6 +131,15 @@ Screenshot capture utility using Playwright:
 - **Output**: Saves to `static/screenshots/current.bmp` (replaces previous screenshot)
 - **Resolution**: Captured at 1440x960, resized to 960x640, saved as BMP format
 - **URL**: Screenshot accessible at `/screenshots/current.bmp`
+- **Process**: 
+  1. Launches headless Chromium browser at 1440x960 resolution
+  2. Navigates to application URL (default: `http://localhost:3000`)
+  3. Waits for page load and map rendering (3 second delay)
+  4. Captures full-page screenshot as temporary PNG
+  5. Resizes image from 1440x960 to 960x640 using PIL/Pillow
+  6. Converts PNG to BMP format
+  7. Saves to `static/screenshots/current.bmp` (replaces previous screenshot)
+  8. Removes temporary PNG file
 - **Functions**:
   - `take_screenshot(url)` - Captures full-page screenshot of the application
   - `get_screenshot_path()` - Returns path to current screenshot
@@ -483,10 +492,39 @@ Serves the latest application screenshot as a BMP image file.
 **Response** (200 OK):
 - Returns BMP image file (960x640 resolution)
 - Content-Type: `image/bmp`
-- Headers include no-cache directives to ensure latest screenshot is served
+- Cache-Control: `no-cache, no-store, must-revalidate` (ensures latest screenshot is always served)
 
 **Response** (404 Not Found):
 - File not found if screenshot hasn't been captured yet
+
+**Usage Examples**:
+
+**In HTML:**
+```html
+<img src="/screenshots/current.bmp" alt="Application Screenshot">
+```
+
+**Direct Browser Access:**
+```
+http://localhost:3000/screenshots/current.bmp
+```
+
+**In JavaScript:**
+```javascript
+fetch('/screenshots/current.bmp')
+  .then(response => response.blob())
+  .then(blob => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(blob);
+    document.body.appendChild(img);
+  });
+```
+
+**Benefits**:
+- Simple URL access - no API calls or JavaScript needed
+- Easy integration with external dashboards, monitoring tools, or documentation
+- Perfect for external monitoring systems
+- Same URL always returns the latest screenshot (no caching)
 
 ### GET /robots.txt
 Serves the robots.txt file to block web crawlers and search engine bots.
@@ -575,12 +613,20 @@ python test_destination.py
 ## Troubleshooting
 
 ### Screenshot Not Accessible
-1. Verify Playwright browsers are installed: Run `playwright install chromium`
-2. Check if screenshot file exists: Look for `static/screenshots/current.bmp`
-3. Check console for screenshot capture errors
-4. Ensure the Flask server is accessible at `http://localhost:3000`
-5. Wait at least 5 seconds after server start for initial screenshot
-6. Try accessing directly: `http://localhost:3000/screenshots/current.bmp`
+1. Wait at least 5 seconds after starting the server (initial screenshot delay)
+2. Verify Playwright browsers are installed: Run `playwright install chromium`
+3. Check if Pillow is installed: `pip install Pillow==12.0.0`
+4. Check if screenshot file exists: Look for `static/screenshots/current.bmp`
+5. Check console logs for screenshot capture errors
+6. Ensure the Flask server is accessible at `http://localhost:3000`
+7. Try accessing directly: `http://localhost:3000/screenshots/current.bmp`
+8. Verify `static/screenshots/` directory exists and is writable
+
+**Playwright Installation Issues**:
+- If `playwright install chromium` fails:
+  - Ensure you have sufficient disk space (~200 MB)
+  - Check internet connectivity
+  - Try running with sudo if permission errors occur
 
 ### No Location Data Displayed
 1. Check if scraper is fetching data: Look for debug messages in console
@@ -645,6 +691,7 @@ The scraper handles various coordinate formats:
 - **Single Ship**: Currently hardcoded for "Sagittarius Leader" only
 - **Screenshot Storage**: Only one screenshot is kept (previous ones are replaced)
 - **Screenshot Timing**: 5-second delay after server start may not be sufficient for slow systems
+- **Screenshot Format**: BMP format chosen for compatibility, but results in larger file sizes than PNG/JPEG
 - **ETA Date**: Hardcoded to December 16, 2025 (modify in `static/app.js` to change)
 - **Speed/Heading**: Not currently extracted or displayed (fields exist in database but are not populated)
 
@@ -695,7 +742,11 @@ Potential improvements:
 - Customizable trail length and styling
 - Speed and heading extraction from shipnext.com
 - Configurable ETA date via API or configuration
-- Screenshot history with timestamps
+- Screenshot history with timestamps (store multiple screenshots with timestamps)
+- Configurable screenshot schedule via web UI
+- Screenshot comparison to detect UI changes
+- Email alerts when screenshots fail
+- Multiple viewport sizes (mobile, tablet, desktop)
 
 ## License
 
