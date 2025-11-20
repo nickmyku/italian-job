@@ -134,7 +134,7 @@ def get_history():
         FROM ship_locations
         WHERE ship_name = ?
         ORDER BY timestamp DESC
-        LIMIT 30
+        LIMIT 50
     ''', ('Sagittarius Leader',))
     
     results = c.fetchall()
