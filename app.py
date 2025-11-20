@@ -37,7 +37,6 @@ def init_db():
             timestamp TEXT NOT NULL,
             location_text TEXT,
             origin_city TEXT,
-            speed REAL,
             heading REAL
         )
     ''')
@@ -104,7 +103,7 @@ def get_location():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        SELECT latitude, longitude, timestamp, location_text, origin_city, speed
+        SELECT latitude, longitude, timestamp, location_text, origin_city
         FROM ship_locations
         WHERE ship_name = ?
         ORDER BY timestamp DESC
@@ -121,7 +120,6 @@ def get_location():
             'timestamp': result[2],
             'location_text': result[3],
             'origin_city': result[4],
-            'speed': result[5],
             'success': True
         })
     else:
@@ -137,7 +135,7 @@ def get_history():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        SELECT latitude, longitude, timestamp, location_text, origin_city, speed
+        SELECT latitude, longitude, timestamp, location_text, origin_city
         FROM ship_locations
         WHERE ship_name = ?
         ORDER BY timestamp DESC
@@ -154,8 +152,7 @@ def get_history():
             'longitude': row[1],
             'timestamp': row[2],
             'location_text': row[3],
-            'origin_city': row[4],
-            'speed': row[5]
+            'origin_city': row[4]
         })
     
     return jsonify({'history': history})
@@ -171,8 +168,8 @@ def manual_update():
             c = conn.cursor()
             c.execute('''
                 INSERT INTO ship_locations 
-                (ship_name, latitude, longitude, timestamp, location_text, origin_city, speed, heading)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (ship_name, latitude, longitude, timestamp, location_text, origin_city, heading)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
                 'Sagittarius Leader',
                 location_data.get('latitude'),
@@ -180,7 +177,6 @@ def manual_update():
                 datetime.now().isoformat(),
                 location_data.get('location_text', ''),
                 location_data.get('origin_city', ''),
-                location_data.get('speed'),
                 None
             ))
             conn.commit()

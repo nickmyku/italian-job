@@ -18,7 +18,6 @@ def test_scraper():
         print(f"  - Location text: {data.get('location_text', 'None')}")
         print(f"  - Latitude: {data.get('latitude', 'None')}")
         print(f"  - Longitude: {data.get('longitude', 'None')}")
-        print(f"  - Speed: {data.get('speed', 'None')}")
         return True
     else:
         print("✗ Scraper returned no data")
