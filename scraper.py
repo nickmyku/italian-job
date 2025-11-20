@@ -311,8 +311,7 @@ def extract_from_shipnext_search(soup, ship_name):
         'location_text': None,
         'origin_city': None,
         'latitude': None,
-        'longitude': None,
-        'speed': None
+        'longitude': None
     }
     
     # Look for destination information
@@ -359,15 +358,6 @@ def extract_from_shipnext_search(soup, ship_name):
             location_data['longitude'] = lon
             print(f"[DEBUG] Coordinates geocoded from location text: Latitude={lat}, Longitude={lon}")
     
-    # Extract speed if available
-    speed_match = re.search(r'Speed[:\s]+([\d.]+)\s*(?:knots?|kn)?', text_content, re.I)
-    if speed_match:
-        try:
-            location_data['speed'] = float(speed_match.group(1))
-        except ValueError:
-            pass
-    
-    
     return location_data if location_data['latitude'] or location_data['location_text'] else None
 
 def extract_from_shipnext_detail(soup, ship_name, response_text=None):
@@ -376,8 +366,7 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         'location_text': None,
         'origin_city': None,
         'latitude': None,
-        'longitude': None,
-        'speed': None
+        'longitude': None
     }
     
     # Normalize ship name for comparison (case-insensitive, strip whitespace)
@@ -794,63 +783,6 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
             location_data['longitude'] = lon
             print(f"[DEBUG] Coordinates geocoded from destination text: Latitude={lat}, Longitude={lon}")
     
-    # Extract speed if available - try multiple patterns
-    speed_patterns = [
-        r'Speed[:\s]+([\d.]+)\s*(?:knots?|kn|kts)?',
-        r'SOG[:\s]+([\d.]+)\s*(?:knots?|kn|kts)?',  # Speed Over Ground
-        r'speed["\']?\s*[:=]\s*([\d.]+)',
-        r'"speed"[:\s]*([\d.]+)',
-        r'speed[:\s]*([\d.]+)',
-    ]
-    
-    # Try text content first
-    for pattern in speed_patterns:
-        speed_match = re.search(pattern, text_content, re.I)
-        if speed_match:
-            try:
-                speed_value = float(speed_match.group(1))
-                location_data['speed'] = speed_value
-                print(f"[DEBUG] Speed extracted: {speed_value}")
-                break
-            except ValueError:
-                continue
-    
-    # Also check raw HTML if available
-    if not location_data['speed'] and response_text:
-        for pattern in speed_patterns:
-            speed_match = re.search(pattern, response_text, re.I)
-            if speed_match:
-                try:
-                    speed_value = float(speed_match.group(1))
-                    location_data['speed'] = speed_value
-                    print(f"[DEBUG] Speed extracted from raw HTML: {speed_value}")
-                    break
-                except ValueError:
-                    continue
-    
-    # Also check JavaScript/JSON data in script tags for speed
-    if not location_data['speed']:
-        for script in scripts:
-            if script.string:
-                speed_patterns_js = [
-                    r'speed["\']?\s*[:=]\s*([\d.]+)',
-                    r'"speed"[:\s]*([\d.]+)',
-                    r'speed[:\s]*([\d.]+)',
-                ]
-                for pattern in speed_patterns_js:
-                    speed_match = re.search(pattern, script.string, re.I)
-                    if speed_match:
-                        try:
-                            speed_value = float(speed_match.group(1))
-                            location_data['speed'] = speed_value
-                            print(f"[DEBUG] Speed extracted from JavaScript: {speed_value}")
-                            break
-                        except ValueError:
-                            continue
-                if location_data['speed']:
-                    break
-    
-    
     # Return data if we have at least location text or coordinates
     # Log what we're returning for debugging
     if location_data['location_text']:
@@ -867,10 +799,5 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         print(f"[DEBUG] Final coordinates: {location_data['latitude']}, {location_data['longitude']}")
     else:
         print("[DEBUG] WARNING: Coordinates could not be found by the scraper")
-    
-    if location_data['speed'] is not None:
-        print(f"[DEBUG] Final speed: {location_data['speed']}")
-    else:
-        print("[DEBUG] WARNING: Speed could not be found by the scraper")
     
     return location_data if (location_data['latitude'] or location_data['location_text']) else None
