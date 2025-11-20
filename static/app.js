@@ -143,6 +143,8 @@ async function fetchLocation() {
         
         if (data.success) {
             updateMap(data);
+            // Refresh history trail to ensure it's up to date
+            fetchHistory();
             showStatus('Destination updated successfully', 'success');
         } else {
             showStatus('No destination data found', 'error');
