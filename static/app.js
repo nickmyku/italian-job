@@ -191,6 +191,21 @@ async function fetchHistory() {
             // Store history data globally
             historyData = data.history;
             
+            // Add header row
+            const headerItem = document.createElement('div');
+            headerItem.className = 'history-item history-header-row';
+            headerItem.innerHTML = `
+                <span class="time">Time</span>
+                <span class="origin">Origin</span>
+                <span class="destination">Destination</span>
+                <span class="coords">Coordinates</span>
+            `;
+            // Prevent header from being clickable
+            headerItem.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+            historyList.appendChild(headerItem);
+            
             data.history.forEach(item => {
                 const historyItem = document.createElement('div');
                 historyItem.className = 'history-item';
@@ -200,6 +215,8 @@ async function fetchHistory() {
                 
                 historyItem.innerHTML = `
                     <span class="time">${timeStr}</span>
+                    <span class="origin">${item.origin_city || '-'}</span>
+                    <span class="destination">${item.location_text || '-'}</span>
                     <span class="coords">${item.latitude?.toFixed(4)}, ${item.longitude?.toFixed(4)}</span>
                 `;
                 
