@@ -8,11 +8,14 @@ This application tracks the location and destination of the cargo ship "Sagittar
 - Scraping real-time data from shipnext.com (vessel page: `https://shipnext.com/vessel/9283887-sagittarius-leader`)
 - Storing location history in a SQLite database
 - Displaying current location on an interactive map using Leaflet.js
-- **NEW**: Visualizing the last 20 historical locations as a trail on the map with lines connecting chronologically to show the ship's path
+- Visualizing the last 20 historical locations as a trail on the map with lines connecting chronologically to show the ship's path
 - Providing a toggle control to show/hide the history trail
+- Displaying origin city and destination information
+- Calculating and displaying days until ETA (December 16, 2025)
 - Providing REST API endpoints for programmatic access
 - Automatically updating location data every 6 hours via scheduled background tasks
 - Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/current.bmp` (captured at 1440x960, resized to 960x640)
+- Serving robots.txt to block web crawlers
 
 ## Architecture
 
@@ -37,7 +40,7 @@ This application tracks the location and destination of the cargo ship "Sagittar
 ### Data Flow
 1. Scheduler triggers update every 6 hours (also runs on startup)
 2. Scraper fetches HTML from shipnext.com vessel page
-3. Parser extracts coordinates, destination text, speed, and heading
+3. Parser extracts coordinates, destination text, and origin city
 4. Data is stored in SQLite database
 5. Frontend requests data via REST API
 6. Map displays current location with marker and info panel
@@ -52,12 +55,14 @@ This application tracks the location and destination of the cargo ship "Sagittar
 ├── scheduler.py              # Background scheduler for automatic updates
 ├── screenshot_util.py        # Screenshot capture utility using Playwright
 ├── requirements.txt          # Python dependencies
-├── test_destination.py      # Test suite for scraper and database
+├── robots.txt                # robots.txt file to block web crawlers
+├── test_destination.py       # Test suite for scraper and database
 ├── ship_locations.db         # SQLite database (created at runtime)
 ├── static/
 │   ├── index.html           # Main HTML page
 │   ├── app.js               # Frontend JavaScript (map, API calls)
 │   ├── styles.css           # CSS styling
+│   ├── favicon.ico          # Favicon
 │   └── screenshots/
 │       └── current.bmp      # Latest application screenshot (created at runtime)
 └── README.md                # This file
@@ -72,22 +77,23 @@ Main Flask application that:
 - Serves static files (HTML, CSS, JS)
 - Provides REST API endpoints:
   - `GET /` - Serves index.html (no rate limit)
+  - `GET /robots.txt` - Serves robots.txt file to block web crawlers (no rate limit)
   - `GET /api/location` - Returns latest ship location (120 req/min)
-  - `GET /api/history` - Returns last 30 location entries (120 req/min)
+  - `GET /api/history` - Returns last 50 location entries (120 req/min)
   - `POST /api/update` - Manually triggers location update (1 req/min)
   - `GET /screenshots/current.bmp` - Serves the latest application screenshot (no rate limit)
 - Starts background scheduler on application startup
 - Runs on `0.0.0.0:3000` (accessible on all network interfaces)
 
 **Database Schema** (`ship_locations` table):
-- `id` (INTEGER PRIMARY KEY)
+- `id` (INTEGER PRIMARY KEY AUTOINCREMENT)
 - `ship_name` (TEXT) - Currently "Sagittarius Leader"
 - `latitude` (REAL) - Decimal degrees (-90 to 90)
 - `longitude` (REAL) - Decimal degrees (-180 to 180)
 - `timestamp` (TEXT) - ISO format datetime string
 - `location_text` (TEXT) - Human-readable destination/port name
-- `speed` (REAL) - Speed in knots (optional)
-- `heading` (REAL) - Heading in degrees 0-360 (optional)
+- `origin_city` (TEXT) - Origin city/port name (where ship is proceeding from)
+- `heading` (REAL) - Reserved for future use (currently NULL)
 
 ### scraper.py
 Web scraping module that extracts ship location data from shipnext.com:
@@ -98,9 +104,9 @@ Web scraping module that extracts ship location data from shipnext.com:
   2. Extracts coordinates from "Vessel's current position is" text pattern
   3. Supports DMS (Degrees/Minutes/Seconds) and decimal degree formats
   4. Extracts destination port name from HTML elements and text patterns
-  5. Extracts speed and heading from text patterns
+  5. Extracts origin city/port from text patterns (e.g., "from X to Y")
   6. Falls back to geocoding if coordinates not found but destination text exists
-- **Return Format**: Dictionary with keys: `latitude`, `longitude`, `location_text`, `speed`, `heading`
+- **Return Format**: Dictionary with keys: `latitude`, `longitude`, `location_text`, `origin_city`
 - **Error Handling**: Returns `None` on failure, prints debug messages to console
 
 ### scheduler.py
@@ -134,13 +140,14 @@ Screenshot capture utility using Playwright:
 Frontend JavaScript that:
 - Initializes Leaflet map on page load with CartoDB Positron tiles (minimalist light style)
 - Fetches location data from `/api/location`
-- Displays ship marker with custom SVG icon
-- Updates info panel with location details
+- Displays ship marker with custom SVG cargo ship icon
+- Updates info panel with location details (origin city, destination, ETA, coordinates)
+- Calculates and displays days until ETA (December 16, 2025)
 - Handles manual updates via button click
 - Fetches and displays location history (clickable to view past locations)
-- **Renders last 20 historical locations as small black dots on the map**
-- **Draws dashed lines connecting historical locations chronologically (oldest to newest) to form a ship trail**
-- **Provides toggle control to show/hide the history trail**
+- Renders last 20 historical locations as small black dots on the map
+- Draws dashed lines connecting historical locations chronologically (oldest to newest) to form a ship trail
+- Provides toggle control to show/hide the history trail (enabled by default)
 - Auto-refreshes location data every 5 minutes
 - Shows status messages for user feedback
 
@@ -156,11 +163,11 @@ Frontend JavaScript that:
 
 ### static/index.html
 HTML structure with:
-- Info panel showing: Last Updated, Destination, Speed, Heading, Coordinates
+- Info panel showing: Last Updated, Origin, Destination, ETA (days until December 16, 2025), Coordinates
 - Map container (`<div id="map">`)
 - History panel with clickable location entries (collapsible)
 - Control buttons: "Get Current Location" and "Center Map"
-- **Toggle control: Checkbox to show/hide history trail on map (checked by default)**
+- Toggle control: Checkbox to show/hide history trail on map (checked by default)
 - Status message area
 
 ### static/styles.css
@@ -408,8 +415,7 @@ Returns the latest ship location data.
   "longitude": -74.0060,
   "timestamp": "2024-01-01T12:00:00",
   "location_text": "New York",
-  "speed": 12.5,
-  "heading": 45.0,
+  "origin_city": "Los Angeles",
   "success": true
 }
 ```
@@ -423,7 +429,7 @@ Returns the latest ship location data.
 ```
 
 ### GET /api/history
-Returns the last 30 location entries.
+Returns the last 50 location entries.
 
 **Rate Limit**: 120 requests per minute
 
@@ -436,8 +442,7 @@ Returns the last 30 location entries.
       "longitude": -74.0060,
       "timestamp": "2024-01-01T12:00:00",
       "location_text": "New York",
-      "speed": 12.5,
-      "heading": 45.0
+      "origin_city": "Los Angeles"
     },
     ...
   ]
@@ -457,8 +462,7 @@ Manually triggers a location update by scraping shipnext.com.
     "latitude": 40.7128,
     "longitude": -74.0060,
     "location_text": "New York",
-    "speed": 12.5,
-    "heading": 45.0
+    "origin_city": "Los Angeles"
   }
 }
 ```
@@ -477,11 +481,21 @@ Serves the latest application screenshot as a BMP image file.
 **Rate Limit**: None (exempt from rate limiting)
 
 **Response** (200 OK):
-- Returns BMP image file
+- Returns BMP image file (960x640 resolution)
+- Content-Type: `image/bmp`
 - Headers include no-cache directives to ensure latest screenshot is served
 
 **Response** (404 Not Found):
 - File not found if screenshot hasn't been captured yet
+
+### GET /robots.txt
+Serves the robots.txt file to block web crawlers and search engine bots.
+
+**Rate Limit**: None (exempt from rate limiting)
+
+**Response** (200 OK):
+- Returns robots.txt file with Disallow rules for all bots
+- Content-Type: `text/plain`
 
 ## Configuration
 
@@ -612,7 +626,7 @@ The scraper uses multiple fallback strategies to extract location data:
 
 1. **Primary Method**: Looks for "Vessel's current position is" text followed by coordinates in DMS or decimal format
 2. **HTML Parsing**: Searches for destination-related HTML elements and attributes
-3. **Text Patterns**: Uses regex patterns to find destination, speed, and heading information
+3. **Text Patterns**: Uses regex patterns to find destination and origin city information
 4. **JavaScript Parsing**: Extracts coordinates from embedded JavaScript/JSON data
 5. **Geocoding Fallback**: If coordinates not found but destination text exists, uses Nominatim geocoding
 
@@ -631,23 +645,39 @@ The scraper handles various coordinate formats:
 - **Single Ship**: Currently hardcoded for "Sagittarius Leader" only
 - **Screenshot Storage**: Only one screenshot is kept (previous ones are replaced)
 - **Screenshot Timing**: 5-second delay after server start may not be sufficient for slow systems
+- **ETA Date**: Hardcoded to December 16, 2025 (modify in `static/app.js` to change)
+- **Speed/Heading**: Not currently extracted or displayed (fields exist in database but are not populated)
 
 ## Features
 
+### Origin and Destination Tracking
+- **Origin City**: Displays the port/city the ship is proceeding from
+- **Destination**: Shows the current destination port/city
+- **Location Text**: Human-readable location information extracted from shipnext.com
+
+### ETA Calculation
+- Calculates and displays days until ETA (December 16, 2025)
+- Updates automatically as the date approaches
+- Shows "Arrived" if the ETA date has passed
+
 ### History Trail Visualization
-The application now displays a visual trail of the ship's recent movements:
+The application displays a visual trail of the ship's recent movements:
 - **Last 20 Locations**: Shows the most recent 20 historical positions on the map
-- **Black Dot Markers**: Each historical location is represented by a small black dot (8x8 pixels) with a white border
+- **Black Dot Markers**: Each historical location is represented by a small black dot (10x10 pixels)
 - **Chronological Path**: Dashed black lines connect consecutive historical positions in chronological order (oldest to newest), creating a trail showing where the ship has traveled
-- **Toggle Control**: Users can show/hide the entire history trail using a checkbox in the controls panel
+- **Toggle Control**: Users can show/hide the entire history trail using a checkbox in the controls panel (enabled by default)
 - **Auto-Update**: The trail automatically updates when new location data is fetched
-- **Visual Clarity**: Lines are semi-transparent (30% opacity) to avoid cluttering the map
+- **Visual Clarity**: Lines use dashed pattern with 80% opacity to avoid cluttering the map
 
 **How to Use**:
 1. The history trail is visible by default when you load the page
 2. Click the "Show History Trail" checkbox in the controls panel to hide/show the trail
 3. The trail updates automatically every 5 minutes or when you click "Get Current Location"
 4. Historical locations in the sidebar are still clickable to view past positions
+
+### Web Crawler Protection
+- Serves `/robots.txt` to block all web crawlers and search engine bots
+- Prevents indexing of the application by search engines
 
 ## Future Enhancements
 
@@ -663,6 +693,9 @@ Potential improvements:
 - Environment-based configuration
 - Animated route playback feature
 - Customizable trail length and styling
+- Speed and heading extraction from shipnext.com
+- Configurable ETA date via API or configuration
+- Screenshot history with timestamps
 
 ## License
 
