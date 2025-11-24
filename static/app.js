@@ -286,17 +286,17 @@ function updateHistoryTrail() {
         return;
     }
     
-    // Get last 20 locations (most recent 20)
-    const last20Locations = historyData.slice(0, 21).filter(item => 
+    // Get last 50 locations (most recent 50)
+    const last50Locations = historyData.slice(0, 50).filter(item => 
         item.latitude && item.longitude
     );
     
-    if (last20Locations.length === 0) {
+    if (last50Locations.length === 0) {
         return;
     }
     
     // Draw markers for each historical location
-    last20Locations.forEach((item, index) => {
+    last50Locations.forEach((item, index) => {
         const lat = item.latitude;
         const lon = item.longitude;
         
@@ -318,7 +318,7 @@ function updateHistoryTrail() {
     
     // Draw lines connecting consecutive locations (from oldest to newest)
     // Note: historyData is ordered from newest to oldest, so we reverse for the trail
-    const reversedLocations = [...last20Locations].reverse();
+    const reversedLocations = [...last50Locations].reverse();
     
     for (let i = 0; i < reversedLocations.length - 1; i++) {
         const fromLocation = reversedLocations[i];
