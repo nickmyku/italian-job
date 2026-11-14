@@ -329,9 +329,9 @@ function updateHistoryTrail() {
             [[fromLocation.latitude, fromLocation.longitude], 
              [toLocation.latitude, toLocation.longitude]],
             {
-                color: '#000',
+                color: '#BC002D',
                 weight: 3,
-                opacity: 0.8,
+                opacity: 0.75,
                 dashArray: '10, 10'
             }
         ).addTo(map);
