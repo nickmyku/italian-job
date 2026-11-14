@@ -12,7 +12,7 @@ def test_scraper():
     print("=" * 60)
     print("TEST 1: Testing scraper directly")
     print("=" * 60)
-    data = scrape_ship_location('Sagittarius Leader')
+    data = scrape_ship_location('VENUS SPIRIT')
     if data:
         print(f"✓ Scraper returned data")
         print(f"  - Location text: {data.get('location_text', 'None')}")
