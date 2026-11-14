@@ -53,7 +53,7 @@ function updateMap(locationData) {
     const cargoShipIconSvg = `
         <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
             <!-- Background circle -->
-            <circle cx="30" cy="30" r="26" fill="#ffffff" stroke="#667eea" stroke-width="2.5" opacity="0.95"/>
+            <circle cx="30" cy="30" r="26" fill="#ffffff" stroke="#BC002D" stroke-width="2.5" opacity="0.95"/>
             <g transform="translate(30, 30)">
                 <!-- Ship hull -->
                 <path d="M -20 8 L -18 5 L 18 5 L 20 8 L 20 12 L -20 12 Z" fill="#2c3e50"/>
@@ -233,7 +233,7 @@ async function fetchHistory() {
             // Update history trail on map
             updateHistoryTrail();
         } else {
-            historyList.innerHTML = '<p style="text-align: center; color: #6c757d;">No history available</p>';
+            historyList.innerHTML = '<p style="text-align: center; color: #5A6570;">No history available</p>';
             historyData = [];
         }
     } catch (error) {

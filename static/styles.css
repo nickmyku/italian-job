@@ -4,10 +4,24 @@
     box-sizing: border-box;
 }
 
+:root {
+    /* Japanese palette: hinomaru vermillion, ai indigo, sumi ink, cool mist */
+    --jp-red: #BC002D;
+    --jp-red-dark: #9A0024;
+    --jp-indigo: #1B3A5F;
+    --jp-indigo-mid: #2A5080;
+    --jp-indigo-soft: #E8EEF5;
+    --jp-ink: #1C1C1C;
+    --jp-mist: #F4F6F9;
+    --jp-paper: #FFFFFF;
+    --jp-muted: #5A6570;
+    --jp-border: #D8DEE6;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background: linear-gradient(135deg, #009246 0%, #FFFFFF 50%, #CE2B37 100%);
-    color: #333;
+    background: linear-gradient(135deg, #1B3A5F 0%, #F4F6F9 45%, #BC002D 100%);
+    color: var(--jp-ink);
     min-height: 100vh;
     padding: 5px;
 }
@@ -15,14 +29,14 @@ body {
 .container {
     max-width: 2560px;
     margin: 0 auto;
-    background: white;
+    background: var(--jp-paper);
     border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 40px rgba(27, 58, 95, 0.25);
     overflow: hidden;
 }
 
 header {
-    background: linear-gradient(135deg, #009246 0%, #FFFFFF 50%, #CE2B37 100%);
+    background: linear-gradient(135deg, #1B3A5F 0%, #F4F6F9 45%, #BC002D 100%);
     color: white;
     padding: 30px;
     text-align: center;
@@ -45,8 +59,8 @@ header h1 {
     display: flex;
     gap: 15px;
     align-items: center;
-    background: #fff;
-    border-top: 1px solid #e9ecef;
+    background: var(--jp-paper);
+    border-top: 1px solid var(--jp-border);
     flex-wrap: wrap;
 }
 
@@ -61,25 +75,25 @@ header h1 {
 }
 
 .btn-primary {
-    background: #009246;
+    background: var(--jp-indigo);
     color: white;
 }
 
 .btn-primary:hover {
-    background: #007a3a;
+    background: var(--jp-indigo-mid);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 146, 70, 0.4);
+    box-shadow: 0 4px 12px rgba(27, 58, 95, 0.4);
 }
 
 .btn-secondary {
-    background: #CE2B37;
+    background: var(--jp-red);
     color: white;
 }
 
 .btn-secondary:hover {
-    background: #b0242e;
+    background: var(--jp-red-dark);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(206, 43, 55, 0.4);
+    box-shadow: 0 4px 12px rgba(188, 0, 45, 0.4);
 }
 
 .status {
@@ -90,18 +104,18 @@ header h1 {
 }
 
 .status.success {
-    background: #d4edda;
-    color: #009246;
+    background: var(--jp-indigo-soft);
+    color: var(--jp-indigo);
 }
 
 .status.error {
-    background: #f8d7da;
-    color: #CE2B37;
+    background: #fde8ec;
+    color: var(--jp-red);
 }
 
 .status.loading {
-    background: #d1ecf1;
-    color: #0c5460;
+    background: var(--jp-indigo-soft);
+    color: var(--jp-indigo-mid);
 }
 
 .info-panel {
@@ -109,8 +123,8 @@ header h1 {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 20px;
     padding: 20px 30px;
-    background: #fff;
-    border-bottom: 1px solid #e9ecef;
+    background: var(--jp-paper);
+    border-bottom: 1px solid var(--jp-border);
 }
 
 .info-item {
@@ -121,7 +135,7 @@ header h1 {
 
 .info-item label {
     font-weight: 600;
-    color: #009246;
+    color: var(--jp-indigo);
     font-size: 1.2em;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -129,7 +143,7 @@ header h1 {
 
 .info-item span {
     font-size: 1.4em;
-    color: #000;
+    color: var(--jp-ink);
     font-weight: 500;
 }
 
@@ -141,12 +155,12 @@ header h1 {
 
 .history-panel {
     padding: 20px 30px;
-    background: #fff;
+    background: var(--jp-paper);
 }
 
 .history-panel h2 {
     margin-bottom: 5px;
-    color: #333;
+    color: var(--jp-ink);
     font-size: 1.5em;
 }
 
@@ -163,12 +177,12 @@ header h1 {
 }
 
 .history-header:hover {
-    background-color: rgba(0, 146, 70, 0.1);
+    background-color: rgba(27, 58, 95, 0.08);
 }
 
 .collapse-icon {
     font-size: 0.8em;
-    color: #009246;
+    color: var(--jp-indigo);
     transition: transform 0.3s ease;
 }
 
@@ -191,7 +205,7 @@ header h1 {
     background: white;
     padding: 15px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(27, 58, 95, 0.1);
     display: grid;
     grid-template-columns: 1.5fr 1fr 1fr 1.2fr;
     gap: 15px;
@@ -199,49 +213,49 @@ header h1 {
 }
 
 .history-item:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 8px rgba(27, 58, 95, 0.15);
     transform: translateY(-2px);
     transition: all 0.2s ease;
 }
 
 .history-item .time {
     font-weight: 600;
-    color: #009246;
+    color: var(--jp-indigo);
 }
 
 .history-item .origin {
-    color: #009246;
+    color: var(--jp-indigo);
     font-weight: 500;
 }
 
 .history-item .destination {
-    color: #CE2B37;
+    color: var(--jp-red);
     font-weight: 500;
 }
 
 .history-item .coords {
-    color: #6c757d;
+    color: var(--jp-muted);
     font-family: monospace;
     font-size: 0.9em;
 }
 
 .history-header-row {
-    background: #f8f9fa !important;
+    background: var(--jp-mist) !important;
     font-weight: 600;
     cursor: default !important;
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 2px solid var(--jp-border);
 }
 
 .history-header-row:hover {
     transform: none !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 2px 4px rgba(27, 58, 95, 0.1) !important;
 }
 
 .history-header-row .time,
 .history-header-row .origin,
 .history-header-row .destination,
 .history-header-row .coords {
-    color: #495057;
+    color: var(--jp-muted);
     text-transform: uppercase;
     font-size: 0.85em;
     letter-spacing: 0.5px;
@@ -273,7 +287,7 @@ header h1 {
     gap: 8px;
     cursor: pointer;
     font-weight: 500;
-    color: #333;
+    color: var(--jp-ink);
     user-select: none;
 }
 
@@ -281,11 +295,11 @@ header h1 {
     width: 18px;
     height: 18px;
     cursor: pointer;
-    accent-color: #009246;
+    accent-color: var(--jp-indigo);
 }
 
 .toggle-control:hover {
-    color: #009246;
+    color: var(--jp-indigo);
 }
 
 .history-marker {
@@ -296,7 +310,7 @@ header h1 {
 }
 
 .history-line {
-    stroke: #009246;
+    stroke: var(--jp-indigo);
     stroke-width: 4;
     stroke-dasharray: 5, 5;
     opacity: 0.6;
