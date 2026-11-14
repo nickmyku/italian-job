@@ -15,7 +15,7 @@ def update_ship_location():
     """Update ship location in database"""
     print(f"[{datetime.now()}] Updating ship location...")
     try:
-        location_data = scrape_ship_location('Sagittarius Leader')
+        location_data = scrape_ship_location('VENUS SPIRIT')
         # Save if we have coordinates OR destination text
         if location_data and (location_data.get('latitude') or location_data.get('location_text')):
             conn = sqlite3.connect(DB_PATH)
@@ -25,7 +25,7 @@ def update_ship_location():
                 (ship_name, latitude, longitude, timestamp, location_text, origin_city, heading)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
-                'Sagittarius Leader',
+                'VENUS SPIRIT',
                 location_data.get('latitude'),
                 location_data.get('longitude'),
                 datetime.now().isoformat(),

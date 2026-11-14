@@ -1,11 +1,11 @@
-# Ship Tracker - Sagittarius Leader
+# Ship Tracker - VENUS SPIRIT
 
-A web application that scrapes shipnext.com for the destination and location information of the ship "Sagittarius Leader" and displays it on an interactive map with automatic scheduled updates. The application also captures hourly screenshots of itself, accessible at `/screenshots/current.bmp`.
+A web application that scrapes shipnext.com for the destination and location information of the ship "VENUS SPIRIT" and displays it on an interactive map with automatic scheduled updates. The application also captures hourly screenshots of itself, accessible at `/screenshots/current.bmp`.
 
 ## Project Overview
 
-This application tracks the location and destination of the cargo ship "Sagittarius Leader" by:
-- Scraping real-time data from shipnext.com (vessel page: `https://shipnext.com/vessel/9283887-sagittarius-leader`)
+This application tracks the location and destination of the cargo ship "VENUS SPIRIT" by:
+- Scraping real-time data from shipnext.com (vessel page: `https://shipnext.com/vessel/9505900-venus-spirit`)
 - Storing location history in a SQLite database
 - Displaying current location on an interactive map using Leaflet.js
 - Visualizing the last 50 historical locations as a trail on the map with lines connecting chronologically to show the ship's path
@@ -87,7 +87,7 @@ Main Flask application that:
 
 **Database Schema** (`ship_locations` table):
 - `id` (INTEGER PRIMARY KEY AUTOINCREMENT)
-- `ship_name` (TEXT) - Currently "Sagittarius Leader"
+- `ship_name` (TEXT) - Currently "VENUS SPIRIT"
 - `latitude` (REAL) - Decimal degrees (-90 to 90)
 - `longitude` (REAL) - Decimal degrees (-180 to 180)
 - `timestamp` (TEXT) - ISO format datetime string
@@ -98,7 +98,7 @@ Main Flask application that:
 ### scraper.py
 Web scraping module that extracts ship location data from shipnext.com:
 - **Main Function**: `scrape_ship_location(ship_name)` - Returns dict with location data
-- **URL**: `https://shipnext.com/vessel/9283887-sagittarius-leader`
+- **URL**: `https://shipnext.com/vessel/9505900-venus-spirit`
 - **Extraction Methods**:
   1. Parses HTML structure using BeautifulSoup
   2. Extracts coordinates from "Vessel's current position is" text pattern
@@ -688,7 +688,7 @@ The scraper handles various coordinate formats:
 - **HTML Structure Changes**: Scraper may break if shipnext.com changes their HTML structure
 - **Geocoding**: Nominatim has usage limits and may fail for ambiguous locations
 - **Database**: SQLite may not be suitable for high-traffic scenarios
-- **Single Ship**: Currently hardcoded for "Sagittarius Leader" only
+- **Single Ship**: Currently hardcoded for "VENUS SPIRIT" only
 - **Screenshot Storage**: Only one screenshot is kept (previous ones are replaced)
 - **Screenshot Timing**: 5-second delay after server start may not be sufficient for slow systems
 - **Screenshot Format**: BMP format chosen for compatibility, but results in larger file sizes than PNG/JPEG

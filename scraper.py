@@ -251,11 +251,11 @@ def extract_coordinates_from_text(text):
 def scrape_ship_location(ship_name):
     """
     Scrape shipnext.com for ship destination information
-    Uses direct vessel URL: https://shipnext.com/vessel/9283887-sagittarius-leader
+    Uses direct vessel URL: https://shipnext.com/vessel/9505900-venus-spirit
     """
     try:
-        # Direct URL to Sagittarius Leader vessel page
-        vessel_url = "https://shipnext.com/vessel/9283887-sagittarius-leader"
+        # Direct URL to VENUS SPIRIT vessel page
+        vessel_url = "https://shipnext.com/vessel/9505900-venus-spirit"
         
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'

@@ -99,7 +99,7 @@ def screenshots(filename):
 @app.route('/api/location')
 @limiter.limit("120 per minute")  # Higher limit for read operations
 def get_location():
-    """Get the latest location of Sagittarius Leader"""
+    """Get the latest location of VENUS SPIRIT"""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
@@ -108,7 +108,7 @@ def get_location():
         WHERE ship_name = ?
         ORDER BY timestamp DESC
         LIMIT 1
-    ''', ('Sagittarius Leader',))
+    ''', ('VENUS SPIRIT',))
     
     result = c.fetchone()
     conn.close()
@@ -140,7 +140,7 @@ def get_history():
         WHERE ship_name = ?
         ORDER BY timestamp DESC
         LIMIT 50
-    ''', ('Sagittarius Leader',))
+    ''', ('VENUS SPIRIT',))
     
     results = c.fetchall()
     conn.close()
@@ -162,7 +162,7 @@ def get_history():
 def manual_update():
     """Manually trigger an update"""
     try:
-        location_data = scrape_ship_location('Sagittarius Leader')
+        location_data = scrape_ship_location('VENUS SPIRIT')
         if location_data:
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
@@ -171,7 +171,7 @@ def manual_update():
                 (ship_name, latitude, longitude, timestamp, location_text, origin_city, heading)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
-                'Sagittarius Leader',
+                'VENUS SPIRIT',
                 location_data.get('latitude'),
                 location_data.get('longitude'),
                 datetime.now().isoformat(),
