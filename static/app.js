@@ -12,12 +12,26 @@ const defaultCoords = [0, 0];
 // Initialize map
 function initMap() {
     map = L.map('map').setView(defaultCoords, 2);
-    
-    // Add CartoDB Positron tiles (similar minimalist style to Toner Lite)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
+
+    // Keep label tiles above the basemap but below polylines/markers
+    map.createPane('labels');
+    map.getPane('labels').style.zIndex = 350;
+    map.getPane('labels').style.pointerEvents = 'none';
+
+    // Esri Light Gray Canvas: free, no API key, grayscale basemap suited to e-ink
+    // (CARTO Positron now requires an API key and shows "API KEY REQUIRED" without one)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, DeLorme, NAVTEQ',
+        maxZoom: 16,
+        maxNativeZoom: 16
+    }).addTo(map);
+
+    // Place labels / boundaries on top of the base canvas
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 16,
+        maxNativeZoom: 16,
+        opacity: 0.95,
+        pane: 'labels'
     }).addTo(map);
 }
 

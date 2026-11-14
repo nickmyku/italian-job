@@ -139,6 +139,15 @@ header h1 {
     z-index: 1;
 }
 
+/*
+ * Mild contrast boost for e-ink/BMP screenshots.
+ * Esri Light Gray is already near-monochrome; keep this gentle so
+ * land/water midtones are not crushed to pure white.
+ */
+.leaflet-tile-pane {
+    filter: contrast(1.2);
+}
+
 .history-panel {
     padding: 20px 30px;
     background: #fff;
