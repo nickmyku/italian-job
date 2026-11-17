@@ -31,7 +31,7 @@ This application tracks the location and destination of the cargo ship "VENUS SP
 
 ### Frontend
 - **Map Library**: Leaflet.js 1.9.4
-- **Map Tiles**: Esri World Light Gray Canvas (grayscale, no API key; tuned for e-ink)
+- **Map Tiles**: Esri World Light Gray Canvas + reference labels, with Natural Earth country outlines (grayscale, no API key; tuned for e-ink)
 - **Auto-refresh**: Frontend polls API every 5 minutes
 - **UI**: Single-page application with info panel, map, and history sidebar
 - **History Trail**: Visual display of last 50 locations as black dots with chronological connecting lines forming a path trail
@@ -63,6 +63,8 @@ This application tracks the location and destination of the cargo ship "VENUS SP
 │   ├── app.js               # Frontend JavaScript (map, API calls)
 │   ├── styles.css           # CSS styling
 │   ├── favicon.ico          # Favicon
+│   ├── geo/
+│   │   └── ne_110m_admin_0_countries.geojson  # Country outlines for e-ink
 │   └── screenshots/
 │       ├── current.bmp        # Latest high-contrast B&W e-ink screenshot (created at runtime)
 │       └── current_color.bmp  # Latest color screenshot (created at runtime)
@@ -132,7 +134,7 @@ Screenshot capture utility using Playwright:
 - **Viewport**: 1440x960
 - **Output**:
   - `static/screenshots/current_color.bmp` — original color screenshot
-  - `static/screenshots/current.bmp` — high-contrast black-and-white e-ink version (1-bit, Floyd-Steinberg dithered)
+  - `static/screenshots/current.bmp` — high-contrast black-and-white e-ink version (1-bit, no dither; solid ink on paper)
 - **Resolution**: Captured at 1440x960, resized to 960x640, saved as BMP format
 - **URLs**: `/screenshots/current.bmp` (e-ink B&W), `/screenshots/current_color.bmp` (color)
 - **Process**: 
@@ -142,7 +144,7 @@ Screenshot capture utility using Playwright:
   4. Captures full-page screenshot as temporary PNG
   5. Resizes image from 1440x960 to 960x640 using PIL/Pillow
   6. Saves the color BMP to `static/screenshots/current_color.bmp`
-  7. Converts to high-contrast B&W (grayscale → autocontrast → contrast boost → 1-bit dither) and saves to `static/screenshots/current.bmp`
+  7. Converts to high-contrast B&W (sharpen → thicken dark strokes → darken midtones → binary ink/paper threshold) and saves to `static/screenshots/current.bmp`
   8. Removes temporary PNG file
 - **Functions**:
   - `take_screenshot(url)` - Captures full-page screenshot of the application
@@ -152,7 +154,7 @@ Screenshot capture utility using Playwright:
 
 ### static/app.js
 Frontend JavaScript that:
-- Initializes Leaflet map on page load with Esri World Light Gray Canvas tiles (grayscale, e-ink friendly, no API key)
+- Initializes Leaflet map on page load with Esri World Light Gray Canvas tiles (grayscale, e-ink friendly, no API key), darkened reference labels, and Natural Earth country outlines for e-ink legibility
 - Fetches location data from `/api/location`
 - Displays ship marker with custom SVG cargo ship icon
 - Updates info panel with location details (origin city, destination, ETA, coordinates)
@@ -214,6 +216,7 @@ CSS styling for the application including:
 ### External Services
 - **shipnext.com** - Source of ship location data
 - **Esri** - Map tile provider (World Light Gray Canvas + Reference via Leaflet; no API key)
+- **Natural Earth** - 110m admin-0 countries GeoJSON for crisp country outlines on e-ink
 - **Nominatim Geocoding** - Converts location names to coordinates (via Geopy)
 
 ## Installation

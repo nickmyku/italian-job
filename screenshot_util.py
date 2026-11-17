@@ -1,7 +1,7 @@
 from playwright.sync_api import sync_playwright
 import os
 from datetime import datetime
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 SCREENSHOT_PATH = 'static/screenshots/current.bmp'
 COLOR_SCREENSHOT_PATH = 'static/screenshots/current_color.bmp'
@@ -9,13 +9,26 @@ COLOR_SCREENSHOT_PATH = 'static/screenshots/current_color.bmp'
 def _to_eink_bw(img):
     """
     Convert an image to high-contrast black-and-white suitable for e-ink.
-    Uses grayscale + autocontrast + contrast boost, then 1-bit Floyd-Steinberg
-    dithering so map detail survives on monochrome displays.
+
+    Goal: solid black text + country outlines on white land/water. Esri Light
+    Gray midtones sit near ~200 after processing — crush them to paper so
+    ocean dither noise cannot obscure labels and coasts. Hard 1-bit (no
+    dither) keeps strokes solid.
     """
     gray = ImageOps.grayscale(img)
-    gray = ImageOps.autocontrast(gray, cutoff=2)
-    gray = ImageEnhance.Contrast(gray).enhance(2.0)
-    return gray.convert('1', dither=Image.Dither.FLOYDSTEINBERG)
+    gray = gray.filter(ImageFilter.UnsharpMask(radius=1.2, percent=160, threshold=2))
+    # Mild thicken so GeoJSON coasts survive resize
+    thickened = gray.filter(ImageFilter.MinFilter(3))
+    gray = Image.blend(gray, thickened, 0.22)
+    # Darken light-gray Esri reference glyphs toward ink
+    gray = gray.point(lambda p: int(round(255 * ((p / 255.0) ** 1.45))))
+    gray = ImageOps.autocontrast(gray, cutoff=1)
+    gray = ImageEnhance.Contrast(gray).enhance(1.55)
+
+    # Binary ink/paper: midtones become paper so ocean noise cannot hide labels
+    return gray.point(lambda p: 0 if p < 150 else 255).convert(
+        '1', dither=Image.Dither.NONE
+    )
 
 def take_screenshot(url='http://localhost:3000'):
     """
@@ -39,8 +52,16 @@ def take_screenshot(url='http://localhost:3000'):
             # Navigate to the application
             page.goto(url, wait_until='networkidle', timeout=30000)
             
-            # Wait a bit for map to load
-            page.wait_for_timeout(3000)
+            # Wait for basemap, label tiles, and country outline GeoJSON
+            page.wait_for_timeout(4000)
+            try:
+                page.wait_for_function(
+                    """() => document.querySelectorAll('.leaflet-overlay-pane path').length > 10""",
+                    timeout=10000
+                )
+            except Exception:
+                pass
+            page.wait_for_timeout(1000)
             
             # Take screenshot to a temporary PNG file first
             temp_path = SCREENSHOT_PATH.replace('.bmp', '_temp.png')

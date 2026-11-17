@@ -26,13 +26,40 @@ function initMap() {
         maxNativeZoom: 16
     }).addTo(map);
 
-    // Place labels / boundaries on top of the base canvas
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+    // Place names from Esri reference tiles (darkened via CSS for e-ink).
+    // Stack twice so thin glyphs hold up after 1-bit dithering.
+    const referenceTiles =
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
+    L.tileLayer(referenceTiles, {
         maxZoom: 16,
         maxNativeZoom: 16,
-        opacity: 0.95,
+        opacity: 1,
         pane: 'labels'
     }).addTo(map);
+    L.tileLayer(referenceTiles, {
+        maxZoom: 16,
+        maxNativeZoom: 16,
+        opacity: 0.75,
+        pane: 'labels'
+    }).addTo(map);
+
+    // Crisp country outlines (Natural Earth 110m) — tile borders are too
+    // faint for e-ink screenshots once converted to 1-bit BMP.
+    fetch('/static/geo/ne_110m_admin_0_countries.geojson')
+        .then((response) => response.json())
+        .then((geojson) => {
+            L.geoJSON(geojson, {
+                style: {
+                    color: '#000000',
+                    weight: 2.75,
+                    opacity: 1,
+                    fill: false,
+                    className: 'country-outline'
+                },
+                interactive: false
+            }).addTo(map);
+        })
+        .catch((err) => console.warn('Failed to load country outlines:', err));
 }
 
 // Update map with ship location
