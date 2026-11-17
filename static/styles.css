@@ -28,7 +28,7 @@ body {
     font-size: 1rem;
     color: var(--sun-ink);
     min-height: 100vh;
-    padding: 5px;
+    padding: 10px;
     /* White field with rising-sun ray wash */
     background-color: var(--sun-white);
     background-image:
