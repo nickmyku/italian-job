@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from PIL import Image
 
-SCREENSHOT_PATH = 'static/screenshots/location.bmp'
+SCREENSHOT_PATH = 'static/screenshots/current.bmp'
 
 def take_screenshot(url='http://localhost:3000'):
     """
@@ -48,7 +48,7 @@ def take_screenshot(url='http://localhost:3000'):
             
         print(f"[{datetime.now()}] Screenshot saved successfully to {SCREENSHOT_PATH}")
         print(f"[{datetime.now()}] Screenshot captured at 1440x960, resized to 960x650, and saved as BMP")
-        print(f"[{datetime.now()}] Screenshot accessible at: /screenshots/location.bmp")
+        print(f"[{datetime.now()}] Screenshot accessible at: /screenshots/current.bmp")
         return True
         
     except Exception as e:
