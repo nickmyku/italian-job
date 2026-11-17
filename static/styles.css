@@ -183,6 +183,29 @@ header h1 {
     filter: contrast(1.2);
 }
 
+/*
+ * Map place-name / reference labels only (~20% larger).
+ * Enlarge Esri Light Gray Reference tiles (256 -> 307.2px) via width/height
+ * rather than transform — Leaflet sets inline transforms for positioning.
+ * Keep overflow visible so scaled tile edges are not clipped.
+ * UI chrome outside #map is unchanged.
+ */
+.leaflet-labels-pane,
+.leaflet-labels-pane .leaflet-tile-container {
+    overflow: visible !important;
+}
+
+.leaflet-labels-pane img.leaflet-tile {
+    width: 307.2px !important;
+    height: 307.2px !important;
+    margin-left: -25.6px !important;
+    margin-top: -25.6px !important;
+}
+
+#map .leaflet-control-attribution {
+    font-size: 1.2em;
+}
+
 .history-panel {
     padding: 20px 30px;
     background: var(--sun-paper);
