@@ -18,9 +18,9 @@
     --sun-ray: rgba(188, 0, 45, 0.2);
 }
 
-/* ~20% larger UI text; em-based sizes inherit this scale */
+/* ~30% larger UI text; em-based sizes inherit this scale */
 html {
-    font-size: 120%;
+    font-size: 130%;
 }
 
 body {
