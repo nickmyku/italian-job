@@ -9,6 +9,22 @@ let historyData = [];
 // Default coordinates (will be updated when data loads)
 const defaultCoords = [0, 0];
 
+// Display timestamps in Arizona time (MST year-round; no DST)
+const DISPLAY_TIME_ZONE = 'America/Phoenix';
+
+function formatArizonaTime(date) {
+    return date.toLocaleString('en-US', {
+        timeZone: DISPLAY_TIME_ZONE,
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZoneName: 'short'
+    });
+}
+
 // Initialize map
 function initMap() {
     map = L.map('map').setView(defaultCoords, 2);
@@ -125,7 +141,7 @@ function updateMap(locationData) {
 function updateInfoPanel(data) {
     if (data.timestamp) {
         const date = new Date(data.timestamp);
-        document.getElementById('lastUpdated').textContent = date.toLocaleString();
+        document.getElementById('lastUpdated').textContent = formatArizonaTime(date);
     }
     
     document.getElementById('originCity').textContent = 
@@ -209,7 +225,7 @@ async function fetchHistory() {
             const headerItem = document.createElement('div');
             headerItem.className = 'history-item history-header-row';
             headerItem.innerHTML = `
-                <span class="time">Time</span>
+                <span class="time">Time (MST)</span>
                 <span class="origin">Origin</span>
                 <span class="destination">Destination</span>
                 <span class="coords">Coordinates</span>
@@ -225,7 +241,7 @@ async function fetchHistory() {
                 historyItem.className = 'history-item';
                 
                 const date = new Date(item.timestamp);
-                const timeStr = date.toLocaleString();
+                const timeStr = formatArizonaTime(date);
                 
                 historyItem.innerHTML = `
                     <span class="time">${timeStr}</span>
