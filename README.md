@@ -1,6 +1,6 @@
 # Ship Tracker - VENUS SPIRIT
 
-A web application that scrapes shipnext.com for the destination and location information of the ship "VENUS SPIRIT" and displays it on an interactive map with automatic scheduled updates. The application also captures hourly screenshots of itself, accessible at `/screenshots/current.bmp`.
+A web application that scrapes shipnext.com for the destination and location information of the ship "VENUS SPIRIT" and displays it on an interactive map with automatic scheduled updates. The application also captures hourly screenshots of itself: a high-contrast black-and-white e-ink version at `/screenshots/current.bmp` and the original color version at `/screenshots/current_color.bmp`.
 
 ## Project Overview
 
@@ -14,7 +14,7 @@ This application tracks the location and destination of the cargo ship "VENUS SP
 - Calculating and displaying days until ETA (December 16, 2025)
 - Providing REST API endpoints for programmatic access
 - Automatically updating location data every 6 hours via scheduled background tasks
-- Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/current.bmp` (captured at 1440x960, resized to 960x640)
+- Taking hourly screenshots of the application for monitoring: high-contrast B&W e-ink at `/screenshots/current.bmp` and color at `/screenshots/current_color.bmp` (captured at 1440x960, resized to 960x640)
 - Serving robots.txt to block web crawlers
 
 ## Architecture
@@ -64,7 +64,8 @@ This application tracks the location and destination of the cargo ship "VENUS SP
 │   ├── styles.css           # CSS styling
 │   ├── favicon.ico          # Favicon
 │   └── screenshots/
-│       └── current.bmp      # Latest application screenshot (created at runtime)
+│       ├── current.bmp        # Latest high-contrast B&W e-ink screenshot (created at runtime)
+│       └── current_color.bmp  # Latest color screenshot (created at runtime)
 └── README.md                # This file
 ```
 
@@ -81,7 +82,8 @@ Main Flask application that:
   - `GET /api/location` - Returns latest ship location (120 req/min)
   - `GET /api/history` - Returns last 50 location entries (120 req/min)
   - `POST /api/update` - Manually triggers location update (1 req/min)
-  - `GET /screenshots/current.bmp` - Serves the latest application screenshot (no rate limit)
+  - `GET /screenshots/current.bmp` - Serves the latest high-contrast B&W e-ink screenshot (no rate limit)
+  - `GET /screenshots/current_color.bmp` - Serves the latest color screenshot (no rate limit)
 - Starts background scheduler on application startup
 - Runs on `0.0.0.0:3000` (accessible on all network interfaces)
 
@@ -128,22 +130,25 @@ Background task scheduler using APScheduler:
 Screenshot capture utility using Playwright:
 - **Browser**: Chromium (headless mode)
 - **Viewport**: 1440x960
-- **Output**: Saves to `static/screenshots/current.bmp` (replaces previous screenshot)
+- **Output**:
+  - `static/screenshots/current_color.bmp` — original color screenshot
+  - `static/screenshots/current.bmp` — high-contrast black-and-white e-ink version (1-bit, Floyd-Steinberg dithered)
 - **Resolution**: Captured at 1440x960, resized to 960x640, saved as BMP format
-- **URL**: Screenshot accessible at `/screenshots/current.bmp`
+- **URLs**: `/screenshots/current.bmp` (e-ink B&W), `/screenshots/current_color.bmp` (color)
 - **Process**: 
   1. Launches headless Chromium browser at 1440x960 resolution
   2. Navigates to application URL (default: `http://localhost:3000`)
   3. Waits for page load and map rendering (3 second delay)
   4. Captures full-page screenshot as temporary PNG
   5. Resizes image from 1440x960 to 960x640 using PIL/Pillow
-  6. Converts PNG to BMP format
-  7. Saves to `static/screenshots/current.bmp` (replaces previous screenshot)
+  6. Saves the color BMP to `static/screenshots/current_color.bmp`
+  7. Converts to high-contrast B&W (grayscale → autocontrast → contrast boost → 1-bit dither) and saves to `static/screenshots/current.bmp`
   8. Removes temporary PNG file
 - **Functions**:
   - `take_screenshot(url)` - Captures full-page screenshot of the application
-  - `get_screenshot_path()` - Returns path to current screenshot
-  - `get_screenshot_timestamp()` - Returns last modified timestamp of screenshot
+  - `get_screenshot_path()` - Returns path to current e-ink screenshot
+  - `get_color_screenshot_path()` - Returns path to current color screenshot
+  - `get_screenshot_timestamp()` - Returns last modified timestamp of e-ink screenshot
 
 ### static/app.js
 Frontend JavaScript that:
@@ -274,7 +279,8 @@ The application will:
 ### Access the Application:
 - Web interface: `http://localhost:3000`
 - API endpoint: `http://localhost:3000/api/location`
-- Screenshot: `http://localhost:3000/screenshots/current.bmp`
+- E-ink screenshot: `http://localhost:3000/screenshots/current.bmp`
+- Color screenshot: `http://localhost:3000/screenshots/current_color.bmp`
 
 **Note**: 
 - Development server runs with `debug=False` and `use_reloader=False` (reloader disabled to prevent scheduler conflicts)
@@ -484,28 +490,40 @@ Manually triggers a location update by scraping shipnext.com.
 ```
 
 ### GET /screenshots/current.bmp
-Serves the latest application screenshot as a BMP image file.
+Serves the latest high-contrast black-and-white e-ink screenshot as a BMP image file.
 
 **Rate Limit**: None (exempt from rate limiting)
 
 **Response** (200 OK):
-- Returns BMP image file (960x640 resolution)
+- Returns 1-bit B&W BMP image file (960x640 resolution), optimized for e-ink displays
 - Content-Type: `image/bmp`
 - Cache-Control: `no-cache, no-store, must-revalidate` (ensures latest screenshot is always served)
 
 **Response** (404 Not Found):
 - File not found if screenshot hasn't been captured yet
 
+### GET /screenshots/current_color.bmp
+Serves the latest color screenshot as a BMP image file (same capture, before e-ink conversion).
+
+**Rate Limit**: None (exempt from rate limiting)
+
+**Response** (200 OK):
+- Returns color BMP image file (960x640 resolution)
+- Content-Type: `image/bmp`
+- Cache-Control: `no-cache, no-store, must-revalidate`
+
 **Usage Examples**:
 
 **In HTML:**
 ```html
-<img src="/screenshots/current.bmp" alt="Application Screenshot">
+<img src="/screenshots/current.bmp" alt="E-ink Application Screenshot">
+<img src="/screenshots/current_color.bmp" alt="Color Application Screenshot">
 ```
 
 **Direct Browser Access:**
 ```
 http://localhost:3000/screenshots/current.bmp
+http://localhost:3000/screenshots/current_color.bmp
 ```
 
 **In JavaScript:**
@@ -615,7 +633,7 @@ python test_destination.py
 1. Wait at least 5 seconds after starting the server (initial screenshot delay)
 2. Verify Playwright browsers are installed: Run `playwright install chromium`
 3. Check if Pillow is installed: `pip install Pillow==12.0.0`
-4. Check if screenshot file exists: Look for `static/screenshots/current.bmp`
+4. Check if screenshot files exist: Look for `static/screenshots/current.bmp` and `static/screenshots/current_color.bmp`
 5. Check console logs for screenshot capture errors
 6. Ensure the Flask server is accessible at `http://localhost:3000`
 7. Try accessing directly: `http://localhost:3000/screenshots/current.bmp`
@@ -688,9 +706,9 @@ The scraper handles various coordinate formats:
 - **Geocoding**: Nominatim has usage limits and may fail for ambiguous locations
 - **Database**: SQLite may not be suitable for high-traffic scenarios
 - **Single Ship**: Currently hardcoded for "VENUS SPIRIT" only
-- **Screenshot Storage**: Only one screenshot is kept (previous ones are replaced)
+- **Screenshot Storage**: Only the latest color and e-ink screenshots are kept (previous ones are replaced)
 - **Screenshot Timing**: 5-second delay after server start may not be sufficient for slow systems
-- **Screenshot Format**: BMP format chosen for compatibility, but results in larger file sizes than PNG/JPEG
+- **Screenshot Format**: BMP format chosen for compatibility (e-ink `current.bmp` is 1-bit B&W; color `current_color.bmp` is larger)
 - **ETA Date**: Hardcoded to December 16, 2025 (modify in `static/app.js` to change)
 - **Speed/Heading**: Not currently extracted or displayed (fields exist in database but are not populated)
 
