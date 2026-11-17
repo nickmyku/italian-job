@@ -1,6 +1,6 @@
 # Ship Tracker - VENUS SPIRIT
 
-A web application that scrapes shipnext.com for the destination and location information of the ship "VENUS SPIRIT" and displays it on an interactive map with automatic scheduled updates. The application also captures hourly screenshots of itself, accessible at `/screenshots/current.bmp`.
+A web application that scrapes shipnext.com for the destination and location information of the ship "VENUS SPIRIT" and displays it on an interactive map with automatic scheduled updates. The application also captures hourly screenshots of itself, accessible at `/screenshots/location.bmp`.
 
 ## Project Overview
 
@@ -14,7 +14,7 @@ This application tracks the location and destination of the cargo ship "VENUS SP
 - Calculating and displaying days until ETA (December 16, 2025)
 - Providing REST API endpoints for programmatic access
 - Automatically updating location data every 6 hours via scheduled background tasks
-- Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/current.bmp` (captured at 1440x960, resized to 960x640)
+- Taking hourly screenshots of the application for monitoring, accessible at `/screenshots/location.bmp` (captured at 1440x960, resized to 960x640)
 - Serving robots.txt to block web crawlers
 
 ## Architecture
@@ -64,7 +64,7 @@ This application tracks the location and destination of the cargo ship "VENUS SP
 │   ├── styles.css           # CSS styling
 │   ├── favicon.ico          # Favicon
 │   └── screenshots/
-│       └── current.bmp      # Latest application screenshot (created at runtime)
+│       └── location.bmp      # Latest application screenshot (created at runtime)
 └── README.md                # This file
 ```
 
@@ -81,7 +81,7 @@ Main Flask application that:
   - `GET /api/location` - Returns latest ship location (120 req/min)
   - `GET /api/history` - Returns last 50 location entries (120 req/min)
   - `POST /api/update` - Manually triggers location update (1 req/min)
-  - `GET /screenshots/current.bmp` - Serves the latest application screenshot (no rate limit)
+  - `GET /screenshots/location.bmp` - Serves the latest application screenshot (no rate limit)
 - Starts background scheduler on application startup
 - Runs on `0.0.0.0:3000` (accessible on all network interfaces)
 
@@ -128,9 +128,9 @@ Background task scheduler using APScheduler:
 Screenshot capture utility using Playwright:
 - **Browser**: Chromium (headless mode)
 - **Viewport**: 1440x960
-- **Output**: Saves to `static/screenshots/current.bmp` (replaces previous screenshot)
+- **Output**: Saves to `static/screenshots/location.bmp` (replaces previous screenshot)
 - **Resolution**: Captured at 1440x960, resized to 960x640, saved as BMP format
-- **URL**: Screenshot accessible at `/screenshots/current.bmp`
+- **URL**: Screenshot accessible at `/screenshots/location.bmp`
 - **Process**: 
   1. Launches headless Chromium browser at 1440x960 resolution
   2. Navigates to application URL (default: `http://localhost:3000`)
@@ -138,7 +138,7 @@ Screenshot capture utility using Playwright:
   4. Captures full-page screenshot as temporary PNG
   5. Resizes image from 1440x960 to 960x640 using PIL/Pillow
   6. Converts PNG to BMP format
-  7. Saves to `static/screenshots/current.bmp` (replaces previous screenshot)
+  7. Saves to `static/screenshots/location.bmp` (replaces previous screenshot)
   8. Removes temporary PNG file
 - **Functions**:
   - `take_screenshot(url)` - Captures full-page screenshot of the application
@@ -274,7 +274,7 @@ The application will:
 ### Access the Application:
 - Web interface: `http://localhost:3000`
 - API endpoint: `http://localhost:3000/api/location`
-- Screenshot: `http://localhost:3000/screenshots/current.bmp`
+- Screenshot: `http://localhost:3000/screenshots/location.bmp`
 
 **Note**: 
 - Development server runs with `debug=False` and `use_reloader=False` (reloader disabled to prevent scheduler conflicts)
@@ -483,7 +483,7 @@ Manually triggers a location update by scraping shipnext.com.
 }
 ```
 
-### GET /screenshots/current.bmp
+### GET /screenshots/location.bmp
 Serves the latest application screenshot as a BMP image file.
 
 **Rate Limit**: None (exempt from rate limiting)
@@ -500,17 +500,17 @@ Serves the latest application screenshot as a BMP image file.
 
 **In HTML:**
 ```html
-<img src="/screenshots/current.bmp" alt="Application Screenshot">
+<img src="/screenshots/location.bmp" alt="Application Screenshot">
 ```
 
 **Direct Browser Access:**
 ```
-http://localhost:3000/screenshots/current.bmp
+http://localhost:3000/screenshots/location.bmp
 ```
 
 **In JavaScript:**
 ```javascript
-fetch('/screenshots/current.bmp')
+fetch('/screenshots/location.bmp')
   .then(response => response.blob())
   .then(blob => {
     const img = document.createElement('img');
@@ -615,10 +615,10 @@ python test_destination.py
 1. Wait at least 5 seconds after starting the server (initial screenshot delay)
 2. Verify Playwright browsers are installed: Run `playwright install chromium`
 3. Check if Pillow is installed: `pip install Pillow==12.0.0`
-4. Check if screenshot file exists: Look for `static/screenshots/current.bmp`
+4. Check if screenshot file exists: Look for `static/screenshots/location.bmp`
 5. Check console logs for screenshot capture errors
 6. Ensure the Flask server is accessible at `http://localhost:3000`
-7. Try accessing directly: `http://localhost:3000/screenshots/current.bmp`
+7. Try accessing directly: `http://localhost:3000/screenshots/location.bmp`
 8. Verify `static/screenshots/` directory exists and is writable
 
 **Playwright Installation Issues**:
