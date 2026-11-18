@@ -1,3 +1,4 @@
+import json
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -248,10 +249,139 @@ def extract_coordinates_from_text(text):
     
     return None, None
 
+def extract_from_vesselfinder(soup):
+    """
+    Extract current destination and origin (last port) from VesselFinder HTML.
+
+    ShipNext voyage prose often lags one voyage behind AIS. VesselFinder exposes
+    the current AIS destination and last port in structured page sections.
+    """
+    location_data = {
+        'location_text': None,
+        'origin_city': None,
+        'latitude': None,
+        'longitude': None,
+        'eta_text': None,
+    }
+
+    dest_block = soup.select_one('div.vi__r1.vi__sbt')
+    if dest_block:
+        dest_link = dest_block.select_one('a._npNa')
+        if dest_link:
+            dest_text = dest_link.get_text(' ', strip=True)
+            if dest_text and len(dest_text) > 2:
+                location_data['location_text'] = dest_text
+                print(f"[DEBUG] VesselFinder destination: {dest_text}")
+        eta_span = dest_block.select_one('span._mcol12ext')
+        if eta_span:
+            eta_text = eta_span.get_text(' ', strip=True)
+            # Normalize "ETA: Dec 2, 04:00" -> "Dec 2, 04:00"
+            eta_text = re.sub(r'^ETA:\s*', '', eta_text, flags=re.I).strip()
+            if eta_text:
+                location_data['eta_text'] = eta_text
+                print(f"[DEBUG] VesselFinder ETA: {eta_text}")
+
+    origin_block = soup.select_one('div.vi__r1.vi__stp')
+    if origin_block:
+        origin_link = origin_block.select_one('a._npNa')
+        if origin_link:
+            origin_text = origin_link.get_text(' ', strip=True)
+            if origin_text and len(origin_text) > 2:
+                location_data['origin_city'] = origin_text
+                print(f"[DEBUG] VesselFinder origin (last port): {origin_text}")
+
+    # Optional coarse coordinates from embedded JSON (prefer ShipNext DMS when available)
+    djson = soup.select_one('#djson[data-json]')
+    if djson and djson.get('data-json'):
+        try:
+            payload = json.loads(djson['data-json'])
+            lat = payload.get('ship_lat')
+            lon = payload.get('ship_lon')
+            if lat is not None and lon is not None:
+                lat_f = float(lat)
+                lon_f = float(lon)
+                if -90 <= lat_f <= 90 and -180 <= lon_f <= 180:
+                    location_data['latitude'] = lat_f
+                    location_data['longitude'] = lon_f
+                    print(f"[DEBUG] VesselFinder coordinates: Latitude={lat_f}, Longitude={lon_f}")
+        except (ValueError, TypeError, json.JSONDecodeError) as e:
+            print(f"[DEBUG] VesselFinder coordinate parse error: {e}")
+
+    return location_data if (
+        location_data['location_text'] or location_data['origin_city'] or location_data['latitude']
+    ) else None
+
+
+def scrape_vesselfinder_voyage(imo='9505900'):
+    """Fetch current voyage ports from VesselFinder for the given IMO."""
+    try:
+        url = f"https://www.vesselfinder.com/vessels/details/{imo}"
+        headers = {
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/120.0.0.0 Safari/537.36'
+            )
+        }
+        print(f"Fetching voyage data from VesselFinder ({url})...")
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        response.encoding = response.apparent_encoding or 'utf-8'
+        soup = BeautifulSoup(response.text, 'html.parser')
+        return extract_from_vesselfinder(soup)
+    except requests.exceptions.RequestException as e:
+        print(f"VesselFinder request error: {e}")
+        return None
+    except Exception as e:
+        print(f"VesselFinder scraping error: {e}")
+        return None
+
+
+def merge_voyage_ports(location_data, voyage_data):
+    """
+    Prefer VesselFinder current destination/origin over ShipNext voyage prose.
+
+    ShipNext often still describes the previous completed voyage after departure.
+    """
+    if not location_data:
+        return voyage_data
+    if not voyage_data:
+        return location_data
+
+    if voyage_data.get('location_text'):
+        prev = location_data.get('location_text')
+        location_data['location_text'] = voyage_data['location_text']
+        if prev and prev != voyage_data['location_text']:
+            print(
+                f"[DEBUG] Overriding ShipNext destination '{prev}' "
+                f"with VesselFinder '{voyage_data['location_text']}'"
+            )
+    if voyage_data.get('origin_city'):
+        prev = location_data.get('origin_city')
+        location_data['origin_city'] = voyage_data['origin_city']
+        if prev and prev != voyage_data['origin_city']:
+            print(
+                f"[DEBUG] Overriding ShipNext origin '{prev}' "
+                f"with VesselFinder '{voyage_data['origin_city']}'"
+            )
+    if voyage_data.get('eta_text'):
+        location_data['eta_text'] = voyage_data['eta_text']
+
+    # Keep ShipNext coordinates when present (more precise DMS); else use VesselFinder
+    if not location_data.get('latitude') and voyage_data.get('latitude') is not None:
+        location_data['latitude'] = voyage_data['latitude']
+        location_data['longitude'] = voyage_data['longitude']
+
+    return location_data
+
+
 def scrape_ship_location(ship_name):
     """
-    Scrape shipnext.com for ship destination information
-    Uses direct vessel URL: https://shipnext.com/vessel/9505900-venus-spirit
+    Scrape ship location information for VENUS SPIRIT.
+
+    Coordinates come primarily from shipnext.com.
+    Current origin/destination come from VesselFinder AIS data, because
+    ShipNext voyage text often lags one voyage behind.
     """
     try:
         # Direct URL to VENUS SPIRIT vessel page
@@ -287,6 +417,10 @@ def scrape_ship_location(ship_name):
         
         # Extract destination information from the vessel detail page
         location_data = extract_from_shipnext_detail(soup, ship_name, response_text=response_text)
+
+        # Override stale ShipNext voyage ports with current AIS ports from VesselFinder
+        voyage_data = scrape_vesselfinder_voyage('9505900')
+        location_data = merge_voyage_ports(location_data, voyage_data)
         
         # Print final coordinates for debugging
         if location_data and location_data.get('latitude') and location_data.get('longitude'):
@@ -295,6 +429,10 @@ def scrape_ship_location(ship_name):
             print(f"[DEBUG] Location data found but no coordinates. Location text: {location_data.get('location_text', 'N/A')}")
         else:
             print("[DEBUG] No location data found")
+
+        if location_data:
+            print(f"[DEBUG] Final origin city: {location_data.get('origin_city')}")
+            print(f"[DEBUG] Final destination text: {location_data.get('location_text')}")
         
         return location_data
         

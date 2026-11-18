@@ -98,17 +98,16 @@ Main Flask application that:
 - `heading` (REAL) - Reserved for future use (currently NULL)
 
 ### scraper.py
-Web scraping module that extracts ship location data from shipnext.com:
+Web scraping module that extracts ship location data:
 - **Main Function**: `scrape_ship_location(ship_name)` - Returns dict with location data
-- **URL**: `https://shipnext.com/vessel/9505900-venus-spirit`
+- **Coordinates URL**: `https://shipnext.com/vessel/9505900-venus-spirit`
+- **Voyage ports URL**: `https://www.vesselfinder.com/vessels/details/9505900` (current AIS destination + last port)
 - **Extraction Methods**:
-  1. Parses HTML structure using BeautifulSoup
-  2. Extracts coordinates from "Vessel's current position is" text pattern
-  3. Supports DMS (Degrees/Minutes/Seconds) and decimal degree formats
-  4. Extracts destination port name from HTML elements and text patterns
-  5. Extracts origin city/port from text patterns (e.g., "from X to Y")
-  6. Falls back to geocoding if coordinates not found but destination text exists
-- **Return Format**: Dictionary with keys: `latitude`, `longitude`, `location_text`, `origin_city`
+  1. Parses ShipNext HTML with BeautifulSoup for precise coordinates (DMS/decimal)
+  2. Extracts ShipNext destination/origin text as a fallback
+  3. Prefers VesselFinder AIS destination and last port, because ShipNext voyage prose often lags one voyage behind
+  4. Falls back to geocoding if coordinates not found but destination text exists
+- **Return Format**: Dictionary with keys: `latitude`, `longitude`, `location_text`, `origin_city` (optional `eta_text`)
 - **Error Handling**: Returns `None` on failure, prints debug messages to console
 
 ### scheduler.py
