@@ -18,12 +18,14 @@ def update_ship_location():
         location_data = scrape_ship_location('VENUS SPIRIT')
         # Save if we have coordinates OR destination text
         if location_data and (location_data.get('latitude') or location_data.get('location_text')):
+            in_transit = location_data.get('in_transit')
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.execute('''
                 INSERT INTO ship_locations 
-                (ship_name, latitude, longitude, timestamp, location_text, origin_city, heading)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (ship_name, latitude, longitude, timestamp, location_text, origin_city,
+                 heading, eta_text, eta, eta_days, in_transit)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 'VENUS SPIRIT',
                 location_data.get('latitude'),
@@ -31,14 +33,21 @@ def update_ship_location():
                 datetime.now().isoformat(),
                 location_data.get('location_text', ''),
                 location_data.get('origin_city', ''),
-                None
+                None,
+                location_data.get('eta_text'),
+                location_data.get('eta'),
+                location_data.get('eta_days'),
+                None if in_transit is None else (1 if in_transit else 0),
             ))
             conn.commit()
             conn.close()
             coord_info = f"{location_data.get('latitude')}, {location_data.get('longitude')}" if location_data.get('latitude') else "No coordinates"
             origin_info = f", Origin: {location_data.get('origin_city')}" if location_data.get('origin_city') else ""
             dest_info = f", Destination: {location_data.get('location_text')}" if location_data.get('location_text') else ""
-            print(f"[{datetime.now()}] Location updated successfully: {coord_info}{origin_info}{dest_info}")
+            eta_info = f", ETA: {location_data.get('eta_text')}" if location_data.get('eta_text') else ""
+            if location_data.get('eta_days') is not None:
+                eta_info += f" ({location_data.get('eta_days')} days)"
+            print(f"[{datetime.now()}] Location updated successfully: {coord_info}{origin_info}{dest_info}{eta_info}")
         else:
             print(f"[{datetime.now()}] Failed to retrieve location data (no coordinates or destination)")
     except Exception as e:

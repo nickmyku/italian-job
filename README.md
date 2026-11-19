@@ -11,7 +11,7 @@ This application tracks the location and destination of the cargo ship "VENUS SP
 - Visualizing the last 50 historical locations as a trail on the map with lines connecting chronologically to show the ship's path
 - Providing a toggle control to show/hide the history trail
 - Displaying origin city and destination information
-- Calculating and displaying days until ETA (December 16, 2025)
+- Calculating and displaying days until ETA from scraped VesselFinder/ShipNext data
 - Providing REST API endpoints for programmatic access
 - Automatically updating location data every 6 hours via scheduled background tasks
 - Taking hourly screenshots of the application for monitoring: high-contrast B&W e-ink at `/screenshots/current.bmp` and color at `/screenshots/current_color.bmp` (captured at 1440x960, resized to 960x640)
@@ -96,6 +96,10 @@ Main Flask application that:
 - `location_text` (TEXT) - Human-readable destination/port name
 - `origin_city` (TEXT) - Origin city/port name (where ship is proceeding from)
 - `heading` (REAL) - Reserved for future use (currently NULL)
+- `eta_text` (TEXT) - Human-readable ETA from VesselFinder/ShipNext (e.g. "Dec 2, 04:00")
+- `eta` (TEXT) - ISO date for ETA (`YYYY-MM-DD`) when parseable
+- `eta_days` (INTEGER) - Days until ETA at scrape time (negative if past)
+- `in_transit` (INTEGER) - 1 when AIS/voyage text indicates the ship is still en route
 
 ### scraper.py
 Web scraping module that extracts ship location data:
@@ -106,8 +110,9 @@ Web scraping module that extracts ship location data:
   1. Parses ShipNext HTML with BeautifulSoup for precise coordinates (DMS/decimal)
   2. Extracts ShipNext destination/origin text as a fallback
   3. Prefers VesselFinder AIS destination and last port, because ShipNext voyage prose often lags one voyage behind
-  4. Falls back to geocoding if coordinates not found but destination text exists
-- **Return Format**: Dictionary with keys: `latitude`, `longitude`, `location_text`, `origin_city` (optional `eta_text`)
+  4. Parses ETA from VesselFinder (`ETA: Dec 2, 04:00` + `(in N days)`) with ShipNext `Estimated time of arrival ... DD-MM-YYYY` as fallback
+  5. Falls back to geocoding if coordinates not found but destination text exists
+- **Return Format**: Dictionary with keys: `latitude`, `longitude`, `location_text`, `origin_city`, optional `eta_text` / `eta` / `eta_days` / `in_transit`
 - **Error Handling**: Returns `None` on failure, prints debug messages to console
 
 ### scheduler.py
@@ -155,7 +160,7 @@ Frontend JavaScript that:
 - Fetches location data from `/api/location`
 - Displays ship marker with custom SVG cargo ship icon
 - Updates info panel with location details (origin city, destination, ETA, coordinates)
-- Calculates and displays days until ETA (December 16, 2025)
+- Displays days until ETA from scraped API fields (`eta_days` / `eta`), not a hardcoded date
 - Handles manual updates via button click
 - Fetches and displays location history (clickable to view past locations)
 - Renders last 50 historical locations as small black dots on the map
@@ -176,7 +181,7 @@ Frontend JavaScript that:
 
 ### static/index.html
 HTML structure with:
-- Info panel showing: Last Updated, Origin, Destination, ETA (days until December 16, 2025), Coordinates
+- Info panel showing: Last Updated, Origin, Destination, ETA (days until scraped arrival), Coordinates
 - Map container (`<div id="map">`)
 - History panel with clickable location entries (collapsible)
 - Control buttons: "Get Current Location" and "Center Map"
@@ -708,7 +713,7 @@ The scraper handles various coordinate formats:
 - **Screenshot Storage**: Only the latest color and e-ink screenshots are kept (previous ones are replaced)
 - **Screenshot Timing**: 5-second delay after server start may not be sufficient for slow systems
 - **Screenshot Format**: BMP format chosen for compatibility (e-ink `current.bmp` is 1-bit B&W; color `current_color.bmp` is larger)
-- **ETA Date**: Hardcoded to December 16, 2025 (modify in `static/app.js` to change)
+- **ETA Source**: Prefer VesselFinder relative countdown; ShipNext ETA used as fallback. Past ETA while still in transit shows "Delayed" rather than "Arrived"
 - **Speed/Heading**: Not currently extracted or displayed (fields exist in database but are not populated)
 
 ## Features
@@ -719,9 +724,10 @@ The scraper handles various coordinate formats:
 - **Location Text**: Human-readable location information extracted from shipnext.com
 
 ### ETA Calculation
-- Calculates and displays days until ETA (December 16, 2025)
-- Updates automatically as the date approaches
-- Shows "Arrived" if the ETA date has passed
+- Uses scraped ETA from VesselFinder (preferred) or ShipNext
+- Displays days until arrival from the latest scrape
+- Shows "Arrived" only when ETA has passed and the ship is not still marked in transit
+- Shows "Delayed" when ETA has passed but voyage/AIS data still indicates in transit
 
 ### History Trail Visualization
 The application displays a visual trail of the ship's recent movements:
@@ -757,7 +763,6 @@ Potential improvements:
 - Animated route playback feature
 - Customizable trail length and styling
 - Speed and heading extraction from shipnext.com
-- Configurable ETA date via API or configuration
 - Screenshot history with timestamps (store multiple screenshots with timestamps)
 - Configurable screenshot schedule via web UI
 - Screenshot comparison to detect UI changes

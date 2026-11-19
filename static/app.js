@@ -149,19 +149,47 @@ function updateInfoPanel(data) {
     document.getElementById('locationText').textContent = 
         data.location_text || 'Unknown';
     
-    // Calculate days until ETA (December 16th, 2025)
-    const etaDate = new Date('2025-12-16T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    etaDate.setHours(0, 0, 0, 0);
-    const daysUntil = Math.ceil((etaDate - today) / (1000 * 60 * 60 * 24));
-    document.getElementById('eta').textContent = 
-        daysUntil >= 0 ? `${daysUntil} days` : 'Arrived';
+    document.getElementById('eta').textContent = formatEtaDisplay(data);
     
     if (data.latitude && data.longitude) {
         document.getElementById('coordinates').textContent = 
             `${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`;
     }
+}
+
+// Format scraped ETA for the info panel. Never use a hardcoded voyage date.
+function formatEtaDisplay(data) {
+    let daysUntil = null;
+
+    if (typeof data.eta_days === 'number' && !Number.isNaN(data.eta_days)) {
+        daysUntil = data.eta_days;
+    } else if (data.eta) {
+        // ISO date from scraper (YYYY-MM-DD)
+        const etaDate = new Date(`${data.eta}T00:00:00`);
+        if (!Number.isNaN(etaDate.getTime())) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            etaDate.setHours(0, 0, 0, 0);
+            daysUntil = Math.round((etaDate - today) / (1000 * 60 * 60 * 24));
+        }
+    }
+
+    const inTransit = data.in_transit === true;
+
+    if (daysUntil === null) {
+        return data.eta_text || '-';
+    }
+
+    if (daysUntil >= 0) {
+        return daysUntil === 1 ? '1 day' : `${daysUntil} days`;
+    }
+
+    // Past the scraped ETA: only show Arrived when the ship is not still in transit
+    if (inTransit) {
+        return 'Delayed';
+    }
+
+    return 'Arrived';
 }
 
 // Fetch location from API
