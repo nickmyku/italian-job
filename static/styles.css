@@ -175,12 +175,27 @@ header h1 {
 }
 
 /*
- * Mild contrast boost for e-ink/BMP screenshots.
- * Esri Light Gray is already near-monochrome; keep this gentle so
- * land/water midtones are not crushed to pure white.
+ * E-ink / 1-bit BMP screenshots: keep the basemap gentle so land/water
+ * midtones are not crushed. Darken reference tiles (country names +
+ * boundaries) on the images themselves — pane-level filters are often
+ * skipped by Chromium's composited Leaflet transforms in screenshots.
  */
 .leaflet-tile-pane {
-    filter: contrast(1.2);
+    filter: contrast(1.15);
+}
+
+.leaflet-labels-pane {
+    mix-blend-mode: multiply;
+}
+
+.leaflet-labels-pane img.leaflet-tile {
+    filter: contrast(3.4) brightness(0.32) saturate(0);
+}
+
+/* Natural Earth country strokes — keep solid black for e-ink */
+.leaflet-overlay-pane path.country-outline {
+    stroke: #000000 !important;
+    stroke-opacity: 1 !important;
 }
 
 /*
