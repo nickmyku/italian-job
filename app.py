@@ -37,15 +37,26 @@ def init_db():
             timestamp TEXT NOT NULL,
             location_text TEXT,
             origin_city TEXT,
-            heading REAL
+            heading REAL,
+            eta_text TEXT,
+            eta TEXT,
+            eta_days INTEGER,
+            in_transit INTEGER
         )
     ''')
-    # Add origin_city column to existing tables if it doesn't exist
-    try:
-        c.execute('ALTER TABLE ship_locations ADD COLUMN origin_city TEXT')
-    except sqlite3.OperationalError:
-        # Column already exists, ignore
-        pass
+    # Add columns to existing tables if they don't exist
+    for column_def in (
+        'origin_city TEXT',
+        'eta_text TEXT',
+        'eta TEXT',
+        'eta_days INTEGER',
+        'in_transit INTEGER',
+    ):
+        try:
+            c.execute(f'ALTER TABLE ship_locations ADD COLUMN {column_def}')
+        except sqlite3.OperationalError:
+            # Column already exists, ignore
+            pass
     conn.commit()
     conn.close()
 
@@ -96,6 +107,35 @@ def screenshots(filename):
     response.headers['Expires'] = '0'
     return response
 
+def _row_to_location_payload(row):
+    """Map a ship_locations row to the API location payload."""
+    # row: lat, lon, timestamp, location_text, origin_city, eta_text, eta, eta_days, in_transit
+    eta_days = row[7]
+    eta = row[6]
+    in_transit = None if row[8] is None else bool(row[8])
+
+    # Recompute days-until from stored ISO ETA when relative countdown was not saved
+    if eta_days is None and eta:
+        try:
+            eta_date = datetime.strptime(eta, '%Y-%m-%d').date()
+            eta_days = (eta_date - datetime.utcnow().date()).days
+        except ValueError:
+            pass
+
+    return {
+        'latitude': row[0],
+        'longitude': row[1],
+        'timestamp': row[2],
+        'location_text': row[3],
+        'origin_city': row[4],
+        'eta_text': row[5],
+        'eta': eta,
+        'eta_days': eta_days,
+        'in_transit': in_transit,
+        'success': True,
+    }
+
+
 @app.route('/api/location')
 @limiter.limit("120 per minute")  # Higher limit for read operations
 def get_location():
@@ -103,7 +143,8 @@ def get_location():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        SELECT latitude, longitude, timestamp, location_text, origin_city
+        SELECT latitude, longitude, timestamp, location_text, origin_city,
+               eta_text, eta, eta_days, in_transit
         FROM ship_locations
         WHERE ship_name = ?
         ORDER BY timestamp DESC
@@ -114,14 +155,7 @@ def get_location():
     conn.close()
     
     if result:
-        return jsonify({
-            'latitude': result[0],
-            'longitude': result[1],
-            'timestamp': result[2],
-            'location_text': result[3],
-            'origin_city': result[4],
-            'success': True
-        })
+        return jsonify(_row_to_location_payload(result))
     else:
         return jsonify({
             'success': False,
@@ -164,12 +198,14 @@ def manual_update():
     try:
         location_data = scrape_ship_location('VENUS SPIRIT')
         if location_data:
+            in_transit = location_data.get('in_transit')
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.execute('''
                 INSERT INTO ship_locations 
-                (ship_name, latitude, longitude, timestamp, location_text, origin_city, heading)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (ship_name, latitude, longitude, timestamp, location_text, origin_city,
+                 heading, eta_text, eta, eta_days, in_transit)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 'VENUS SPIRIT',
                 location_data.get('latitude'),
@@ -177,7 +213,11 @@ def manual_update():
                 datetime.now().isoformat(),
                 location_data.get('location_text', ''),
                 location_data.get('origin_city', ''),
-                None
+                None,
+                location_data.get('eta_text'),
+                location_data.get('eta'),
+                location_data.get('eta_days'),
+                None if in_transit is None else (1 if in_transit else 0),
             ))
             conn.commit()
             conn.close()

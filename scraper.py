@@ -2,6 +2,7 @@ import json
 import requests
 from bs4 import BeautifulSoup
 import re
+from datetime import datetime, timedelta
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 import time
@@ -249,6 +250,136 @@ def extract_coordinates_from_text(text):
     
     return None, None
 
+def parse_eta_relative(relative_text):
+    """
+    Parse VesselFinder relative ETA strings like "(in 13 days)" or "(2 days ago)".
+
+    Returns days until ETA (negative if past), or None if unparseable.
+    """
+    if not relative_text:
+        return None
+
+    text = relative_text.strip().lower()
+    text = text.strip('()').strip()
+
+    if re.search(r'\barrived\b', text):
+        return -1
+
+    in_match = re.search(
+        r'\bin\s+(\d+)\s*(day|days|hour|hours|hr|hrs|minute|minutes|min|mins)\b',
+        text,
+    )
+    if in_match:
+        amount = int(in_match.group(1))
+        unit = in_match.group(2)
+        if unit.startswith('day'):
+            return amount
+        # Same calendar day for hour/minute countdowns
+        return 0
+
+    ago_match = re.search(
+        r'\b(\d+)\s*(day|days|hour|hours|hr|hrs|minute|minutes|min|mins)\s+ago\b',
+        text,
+    )
+    if ago_match:
+        amount = int(ago_match.group(1))
+        unit = ago_match.group(2)
+        if unit.startswith('day'):
+            return -amount
+        return -1
+
+    if re.search(r'\btoday\b', text):
+        return 0
+
+    return None
+
+
+def parse_eta_text_to_iso(eta_text, reference_date=None):
+    """
+    Parse VesselFinder-style ETA text ("Dec 2, 04:00") into an ISO date (YYYY-MM-DD).
+
+    Year is often omitted; infer current year, rolling forward if the date is
+    more than one day behind the reference date.
+    """
+    if not eta_text:
+        return None
+
+    if reference_date is None:
+        reference_date = datetime.utcnow().date()
+    elif hasattr(reference_date, 'date'):
+        reference_date = reference_date.date()
+
+    cleaned = re.sub(r'^ETA:\s*', '', eta_text.strip(), flags=re.I)
+
+    # "Dec 2, 04:00" or "Dec 2, 2026, 04:00" or "Dec 2"
+    month_day = re.search(
+        r'\b([A-Za-z]{3,9})\s+(\d{1,2})(?:,\s*(\d{4}))?(?:,\s*\d{1,2}:\d{2})?\b',
+        cleaned,
+    )
+    if month_day:
+        month_name = month_day.group(1)
+        day = int(month_day.group(2))
+        year = int(month_day.group(3)) if month_day.group(3) else reference_date.year
+        try:
+            eta_date = datetime.strptime(f'{month_name} {day} {year}', '%b %d %Y').date()
+        except ValueError:
+            try:
+                eta_date = datetime.strptime(f'{month_name} {day} {year}', '%B %d %Y').date()
+            except ValueError:
+                return None
+        if month_day.group(3) is None and eta_date < (reference_date - timedelta(days=1)):
+            try:
+                eta_date = eta_date.replace(year=year + 1)
+            except ValueError:
+                return None
+        return eta_date.isoformat()
+
+    # ShipNext style: DD-MM-YYYY
+    dmy = re.search(r'\b(\d{1,2})-(\d{1,2})-(\d{4})\b', cleaned)
+    if dmy:
+        day, month, year = int(dmy.group(1)), int(dmy.group(2)), int(dmy.group(3))
+        try:
+            return datetime(year, month, day).date().isoformat()
+        except ValueError:
+            return None
+
+    return None
+
+
+def extract_shipnext_eta_and_transit(text):
+    """
+    Extract ETA and in-transit flag from ShipNext voyage prose.
+
+    Example: "Estimated time of arrival at Kawasaki, Japan is 16-11-2026 at 20:20."
+    """
+    result = {
+        'eta_text': None,
+        'eta': None,
+        'in_transit': None,
+    }
+    if not text:
+        return result
+
+    if re.search(r'currently on route to', text, re.I):
+        result['in_transit'] = True
+    elif re.search(r'\barrived\b|\bin port\b|\bat anchorage\b|\bmoored\b', text, re.I):
+        result['in_transit'] = False
+
+    eta_match = re.search(
+        r'Estimated time of arrival[^.]{0,120}?is\s+(\d{1,2}-\d{1,2}-\d{4})(?:\s+at\s+(\d{1,2}:\d{2}))?',
+        text,
+        re.I,
+    )
+    if eta_match:
+        date_part = eta_match.group(1)
+        time_part = eta_match.group(2)
+        result['eta_text'] = f'{date_part} {time_part}'.strip() if time_part else date_part
+        result['eta'] = parse_eta_text_to_iso(date_part)
+        print(f"[DEBUG] ShipNext ETA: {result['eta_text']} (iso={result['eta']})")
+
+    return result
+
+
 def extract_from_vesselfinder(soup):
     """
     Extract current destination and origin (last port) from VesselFinder HTML.
@@ -262,6 +393,9 @@ def extract_from_vesselfinder(soup):
         'latitude': None,
         'longitude': None,
         'eta_text': None,
+        'eta': None,
+        'eta_days': None,
+        'in_transit': None,
     }
 
     dest_block = soup.select_one('div.vi__r1.vi__sbt')
@@ -279,7 +413,16 @@ def extract_from_vesselfinder(soup):
             eta_text = re.sub(r'^ETA:\s*', '', eta_text, flags=re.I).strip()
             if eta_text:
                 location_data['eta_text'] = eta_text
-                print(f"[DEBUG] VesselFinder ETA: {eta_text}")
+                location_data['eta'] = parse_eta_text_to_iso(eta_text)
+                print(f"[DEBUG] VesselFinder ETA: {eta_text} (iso={location_data['eta']})")
+        relative_span = dest_block.select_one('span._arrTde')
+        if relative_span:
+            relative_text = relative_span.get_text(' ', strip=True)
+            eta_days = parse_eta_relative(relative_text)
+            if eta_days is not None:
+                location_data['eta_days'] = eta_days
+                location_data['in_transit'] = eta_days >= 0
+                print(f"[DEBUG] VesselFinder ETA relative: {relative_text} -> {eta_days} days")
 
     origin_block = soup.select_one('div.vi__r1.vi__stp')
     if origin_block:
@@ -342,6 +485,8 @@ def merge_voyage_ports(location_data, voyage_data):
     Prefer VesselFinder current destination/origin over ShipNext voyage prose.
 
     ShipNext often still describes the previous completed voyage after departure.
+    VesselFinder ETA/relative countdown is preferred when present; ShipNext ETA
+    is kept only as a fallback.
     """
     if not location_data:
         return voyage_data
@@ -364,8 +509,16 @@ def merge_voyage_ports(location_data, voyage_data):
                 f"[DEBUG] Overriding ShipNext origin '{prev}' "
                 f"with VesselFinder '{voyage_data['origin_city']}'"
             )
+
+    # Prefer VesselFinder ETA fields; keep ShipNext values when VF has none
     if voyage_data.get('eta_text'):
         location_data['eta_text'] = voyage_data['eta_text']
+    if voyage_data.get('eta'):
+        location_data['eta'] = voyage_data['eta']
+    if voyage_data.get('eta_days') is not None:
+        location_data['eta_days'] = voyage_data['eta_days']
+    if voyage_data.get('in_transit') is not None:
+        location_data['in_transit'] = voyage_data['in_transit']
 
     # Keep ShipNext coordinates when present (more precise DMS); else use VesselFinder
     if not location_data.get('latitude') and voyage_data.get('latitude') is not None:
@@ -504,7 +657,11 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         'location_text': None,
         'origin_city': None,
         'latitude': None,
-        'longitude': None
+        'longitude': None,
+        'eta_text': None,
+        'eta': None,
+        'eta_days': None,
+        'in_transit': None,
     }
     
     # Normalize ship name for comparison (case-insensitive, strip whitespace)
@@ -920,6 +1077,29 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
             location_data['latitude'] = lat
             location_data['longitude'] = lon
             print(f"[DEBUG] Coordinates geocoded from destination text: Latitude={lat}, Longitude={lon}")
+
+    # Parse ShipNext ETA / transit status from voyage prose (VesselFinder may override).
+    # Prefer parsed text: raw HTML inserts comment markers around the ETA date.
+    shipnext_eta = extract_shipnext_eta_and_transit(text_content)
+    if not shipnext_eta.get('eta') and response_text:
+        # Fallback: strip HTML comments then retry on raw markup
+        cleaned_html = re.sub(r'<!--.*?-->', '', response_text, flags=re.S)
+        shipnext_eta = extract_shipnext_eta_and_transit(
+            BeautifulSoup(cleaned_html, 'html.parser').get_text(' ')
+        )
+    if shipnext_eta.get('eta_text'):
+        location_data['eta_text'] = shipnext_eta['eta_text']
+    if shipnext_eta.get('eta'):
+        location_data['eta'] = shipnext_eta['eta']
+        # Derive days-until when VesselFinder relative countdown is unavailable
+        try:
+            eta_date = datetime.strptime(shipnext_eta['eta'], '%Y-%m-%d').date()
+            today = datetime.utcnow().date()
+            location_data['eta_days'] = (eta_date - today).days
+        except ValueError:
+            pass
+    if shipnext_eta.get('in_transit') is not None:
+        location_data['in_transit'] = shipnext_eta['in_transit']
     
     # Return data if we have at least location text or coordinates
     # Log what we're returning for debugging
@@ -937,5 +1117,12 @@ def extract_from_shipnext_detail(soup, ship_name, response_text=None):
         print(f"[DEBUG] Final coordinates: {location_data['latitude']}, {location_data['longitude']}")
     else:
         print("[DEBUG] WARNING: Coordinates could not be found by the scraper")
+
+    if location_data.get('eta_text') or location_data.get('eta_days') is not None:
+        print(
+            f"[DEBUG] Final ETA: text={location_data.get('eta_text')}, "
+            f"iso={location_data.get('eta')}, days={location_data.get('eta_days')}, "
+            f"in_transit={location_data.get('in_transit')}"
+        )
     
     return location_data if (location_data['latitude'] or location_data['location_text']) else None
